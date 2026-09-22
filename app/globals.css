@@ -1,0 +1,130 @@
+@import "tailwindcss";
+
+/*
+ * Cuework design tokens — derived from the logo, not invented around it.
+ *   ink  #17231F  the Cue Mark's deep green-black: structure, text, primary actions
+ *   cue  #D9691D  the single orange bar: "this one needs you" — used sparingly
+ * Neutrals are tinted toward the ink so nothing reads as cold grey.
+ * Orange is never used for small text (3.5:1); cue-700 is the accessible text shade.
+ */
+@theme {
+  --font-sans: var(--font-geist-sans), ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-mono: var(--font-geist-mono), ui-monospace, "SF Mono", Menlo, monospace;
+
+  --color-paper: #f5f4ef;
+  --color-surface: #ffffff;
+  --color-sunken: #edece5;
+  --color-line: #e2e0d7;
+  --color-line-strong: #cbc8bb;
+
+  --color-ink: #17231f;
+  --color-ink-2: #24322d;
+  --color-ink-3: #33423c;
+  --color-soft: #3b4a44;
+  --color-muted: #5e6b65;
+
+  --color-cue: #d9691d;
+  --color-cue-700: #b14e0e;
+  --color-cue-soft: #fbebdd;
+
+  --color-moss: #236648;
+  --color-moss-soft: #e3f1ea;
+  --color-brick: #b0362a;
+  --color-brick-soft: #f9e5e1;
+  --color-slate: #2f6f82;
+  --color-slate-soft: #e1eff3;
+
+  --color-side-text: #c9d3ce;
+  --color-side-muted: #93a39c;
+
+  --shadow-card: 0 1px 0 rgb(23 35 31 / 0.03), 0 1px 2px rgb(23 35 31 / 0.05);
+  --shadow-lift: 0 1px 0 rgb(23 35 31 / 0.04), 0 8px 24px -8px rgb(23 35 31 / 0.16);
+  --shadow-pop: 0 12px 40px -12px rgb(23 35 31 / 0.28), 0 2px 6px rgb(23 35 31 / 0.08);
+
+  /* `backwards` (not `both`): a retained transform would trap position:fixed descendants like the plan's commit bar. */
+  --animate-rise: rise 0.35s cubic-bezier(0.22, 1, 0.36, 1) backwards;
+  --animate-fade: fade 0.2s ease-out both;
+  --animate-toast: toast 0.28s cubic-bezier(0.22, 1, 0.36, 1) both;
+
+  @keyframes rise {
+    from { opacity: 0; transform: translateY(6px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  @keyframes fade {
+    from { opacity: 0; }
+    to { opacity: 1; }
+  }
+  @keyframes toast {
+    from { opacity: 0; transform: translateY(10px) scale(0.98); }
+    to { opacity: 1; transform: translateY(0) scale(1); }
+  }
+}
+
+:root {
+  color-scheme: light;
+}
+
+html {
+  -webkit-text-size-adjust: 100%;
+  scroll-behavior: smooth;
+}
+
+body {
+  background: var(--color-paper);
+  color: var(--color-ink);
+  font-family: var(--font-sans);
+  font-size: 15px;
+  line-height: 1.55;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+h1, h2, h3, h4 {
+  letter-spacing: -0.015em;
+  font-weight: 600;
+  text-wrap: balance;
+}
+
+p { text-wrap: pretty; }
+
+/* Numbers should line up in tables, meters and deltas. */
+.tabular { font-variant-numeric: tabular-nums; font-feature-settings: "tnum"; }
+
+:focus-visible {
+  outline: 2px solid var(--color-cue-700);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+::selection { background: #f4d3b8; color: var(--color-ink); }
+
+/* Radix dialog overlay/content animation hooks */
+[data-state="open"].dialog-overlay { animation: fade 0.18s ease-out both; }
+[data-state="open"].dialog-content { animation: rise 0.25s cubic-bezier(0.22, 1, 0.36, 1) both; }
+[data-state="open"].drawer-content { animation: drawer 0.28s cubic-bezier(0.22, 1, 0.36, 1) both; }
+@keyframes drawer {
+  from { transform: translateX(-24px); opacity: 0; }
+  to { transform: translateX(0); opacity: 1; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+@media print {
+  body { background: #fff; font-size: 12px; }
+  .no-print { display: none !important; }
+  .print-only { display: block !important; }
+  .print-plain { box-shadow: none !important; border: none !important; padding: 0 !important; }
+}
+.print-only { display: none; }
+
+/* Slim, quiet scrollbars for horizontally scrolling boards.
+   `relative` matters: absolutely-positioned children (e.g. .sr-only labels) are only clipped by a scroll
+   container that is also their containing block; otherwise they stretch the whole page sideways. */
+.thin-scroll { position: relative; scrollbar-width: thin; scrollbar-color: var(--color-line-strong) transparent; }

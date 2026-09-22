@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 96 96" role="img" aria-labelledby="title desc">
+  <title id="title">Cuework Cue Mark</title>
+  <desc id="desc">Several organized signals with one orange cue.</desc>
+  <g fill="none" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M78 18H26a10 10 0 0 0-10 10v40a10 10 0 0 0 10 10h52" stroke="#17231F" stroke-width="10"/>
+    <path d="M29 33h23M29 48h18" stroke="#17231F" stroke-width="8"/>
+    <path d="M29 63h37" stroke="#D9691D" stroke-width="8"/>
+  </g>
+</svg>

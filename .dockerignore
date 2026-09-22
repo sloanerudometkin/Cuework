@@ -1,0 +1,11 @@
+node_modules
+.next
+.data
+.git
+.env*
+!.env.example
+"brand assets"
+tests
+*.md
+.claude
+npm-debug.log*

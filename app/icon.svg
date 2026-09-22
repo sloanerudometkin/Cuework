@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 96 96" role="img" aria-label="Cuework">
+  <rect width="96" height="96" rx="20" fill="#17231F"/>
+  <g fill="none" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M76 20H28a9 9 0 0 0-9 9v38a9 9 0 0 0 9 9h48" stroke="#FFFFFF" stroke-width="9"/>
+    <path d="M31 35h21M31 49h17" stroke="#FFFFFF" stroke-width="7"/>
+    <path d="M31 63h34" stroke="#D9691D" stroke-width="7"/>
+  </g>
+</svg>
