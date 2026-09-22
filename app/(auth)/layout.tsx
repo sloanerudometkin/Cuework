@@ -8,7 +8,7 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
     <div className="grid min-h-dvh lg:grid-cols-[minmax(0,5fr)_minmax(0,6fr)]">
       <aside className="relative hidden flex-col justify-between overflow-hidden bg-ink p-12 text-white lg:flex">
         <Link href="/" aria-label="Cuework home">
-          <Logo variant="reverse" height={30} />
+          <Logo variant="reverse" height={44} />
         </Link>
         <div>
           <h2 className="max-w-md text-[2rem] font-semibold leading-tight tracking-tight">
@@ -30,7 +30,7 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
       </aside>
       <div className="flex flex-col px-5 py-8 sm:px-10">
         <Link href="/" className="mb-10 lg:hidden" aria-label="Cuework home">
-          <Logo height={26} />
+          <Logo height={32} />
         </Link>
         <main id="main" className="m-auto w-full max-w-[26rem]">
           {children}

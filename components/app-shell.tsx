@@ -81,7 +81,7 @@ function NavLinks({ shell, onNavigate }: { shell: ShellData; onNavigate?: () => 
 function SidebarBody({ shell, user, onNavigate }: { shell: ShellData; user: { name: string; email: string }; onNavigate?: () => void }) {
   return (
     <div className="flex h-full flex-col gap-6">
-      <Logo variant="reverse" height={26} className="ml-1" />
+      <Logo variant="reverse" height={34} className="ml-1" />
       <div className="rounded-lg border border-white/10 bg-white/5 px-3 py-2.5">
         <p className="truncate text-sm font-medium text-white">{shell.orgName}</p>
         <div className="mt-1 flex items-center gap-2 text-xs text-side-muted">
@@ -113,7 +113,7 @@ export function AppShell({ shell, user, children }: { shell: ShellData; user: { 
 
       <header className="no-print sticky top-0 z-30 flex h-14 items-center justify-between bg-ink px-4 lg:hidden">
         <Link href="/overview" aria-label="Cuework home">
-          <LogoMark variant="reverse" size={30} />
+          <LogoMark variant="reverse" size={34} />
         </Link>
         <p className="mx-3 min-w-0 flex-1 truncate text-sm font-medium text-white">{shell.orgName}</p>
         <Dialog open={open} onOpenChange={setOpen}>
