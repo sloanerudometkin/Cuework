@@ -191,7 +191,7 @@ export function PlanBuilder({ plan, readOnly }: { plan: WeekPlanView; readOnly: 
                 </p>
               </div>
               {plan.history.rate != null ? (
-                <p className="mt-5 border-t border-white/10 pt-4 text-[13px] leading-snug text-side-text">
+                <p className="mt-5 border-t border-white/10 pt-4 text-[14.56px] leading-snug text-side-text">
                   Your team finished <strong className="text-white">{Math.round(plan.history.rate * 100)}%</strong> of what it committed over the last {plan.history.weeks} weeks. Aim for ≤ {Math.round((1 - plan.buffer) * 100)}%.
                 </p>
               ) : null}
@@ -256,7 +256,7 @@ export function PlanBuilder({ plan, readOnly }: { plan: WeekPlanView; readOnly: 
                           ) : null}
                           {it.needsLeadership ? <Badge tone="cue">Needs leadership</Badge> : null}
                         </div>
-                        {it.status === "blocked" && it.blockedReason ? <p className="mt-2 text-[13px] text-soft">{it.blockedReason}</p> : null}
+                        {it.status === "blocked" && it.blockedReason ? <p className="mt-2 text-[14.56px] text-soft">{it.blockedReason}</p> : null}
                       </div>
                       <PriorityChip score={it.priorityScore} size="sm" showLabel={false} />
                     </div>
@@ -266,7 +266,7 @@ export function PlanBuilder({ plan, readOnly }: { plan: WeekPlanView; readOnly: 
                           Owner
                           <Select
                             aria-label={`Owner of ${it.title}`}
-                            className={cn("h-8 w-40 text-[13px]", !it.assigneeId && "border-brick")}
+                            className={cn("h-8 w-40 text-[14.56px]", !it.assigneeId && "border-brick")}
                             value={it.assigneeId ?? ""}
                             disabled={it.status === "complete"}
                             onChange={(e) => setItems((cur) => cur.map((x) => (x.id === it.id ? { ...x, assigneeId: e.target.value || null } : x)))}

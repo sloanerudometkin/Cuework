@@ -272,7 +272,7 @@ function Detail({
               fit.tone === "bad" && "border-brick/30 bg-brick-soft text-ink",
             )}
           >
-            <p className="mb-0.5 text-[11px] font-semibold uppercase tracking-[0.08em] text-muted">Can the team realistically do it?</p>
+            <p className="mb-0.5 text-[12.32px] font-semibold uppercase tracking-[0.08em] text-muted">Can the team realistically do it?</p>
             {fit.text}
           </div>
         ) : null}
@@ -310,7 +310,7 @@ function Detail({
                 <dt className="text-sm text-soft">{e.label}</dt>
                 <dd>
                   <span className="tabular text-sm font-semibold">{e.value}</span>
-                  {e.comparison ? <span className="ml-2 text-[13px] text-muted">{e.comparison}</span> : null}
+                  {e.comparison ? <span className="ml-2 text-[14.56px] text-muted">{e.comparison}</span> : null}
                 </dd>
               </div>
             ))}
@@ -332,7 +332,7 @@ function Detail({
           </div>
           <details className="mt-4 group">
             <summary className="cursor-pointer text-sm font-medium text-soft hover:text-ink">How the score is built</summary>
-            <ul className="mt-3 space-y-1.5 text-[13px]">
+            <ul className="mt-3 space-y-1.5 text-[14.56px]">
               {drivers.map((d) => (
                 <li key={d.label} className="flex items-center justify-between rounded-lg bg-sunken px-3 py-1.5">
                   <span>{d.label} <span className="text-muted">({d.note})</span></span>

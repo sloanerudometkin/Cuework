@@ -9,7 +9,7 @@ export function PriorityChip({ score, size = "md", showLabel = true }: { score: 
       <span
         className={cn(
           "tabular grid place-items-center rounded-lg font-semibold",
-          size === "sm" ? "size-8 text-[13px]" : "size-10 text-sm",
+          size === "sm" ? "size-8 text-[14.56px]" : "size-10 text-sm",
           band === "now" && "bg-ink text-white",
           band === "soon" && "bg-cue-soft text-cue-700",
           band === "consider" && "bg-sunken text-soft",

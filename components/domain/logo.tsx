@@ -2,7 +2,7 @@ import Image from "next/image";
 import { cn } from "@/lib/utils";
 
 /** The supplied logo files, unmodified. `reverse` is the white-on-dark lockup with the orange cue. */
-export function Logo({ variant = "primary", className, height = 28 }: { variant?: "primary" | "reverse"; className?: string; height?: number }) {
+export function Logo({ variant = "primary", className, height = 44 }: { variant?: "primary" | "reverse"; className?: string; height?: number }) {
   return (
     <Image
       src={variant === "reverse" ? "/brand/cuework-reverse.svg" : "/brand/cuework-primary.svg"}
@@ -17,7 +17,7 @@ export function Logo({ variant = "primary", className, height = 28 }: { variant?
   );
 }
 
-export function LogoMark({ variant = "primary", size = 28, className }: { variant?: "primary" | "reverse"; size?: number; className?: string }) {
+export function LogoMark({ variant = "primary", size = 44, className }: { variant?: "primary" | "reverse"; size?: number; className?: string }) {
   return (
     <Image
       src={variant === "reverse" ? "/brand/cuework-mark-reverse.svg" : "/brand/cuework-mark.svg"}

@@ -16,7 +16,7 @@ import { cn } from "@/lib/utils";
 const TONE: Record<Sentiment, string> = { good: "text-moss", bad: "text-brick", neutral: "text-muted" };
 
 function H({ children }: { children: React.ReactNode }) {
-  return <h2 className="mb-3 mt-9 border-b border-line pb-2 text-[13px] font-semibold uppercase tracking-[0.08em] text-muted print:mt-6">{children}</h2>;
+  return <h2 className="mb-3 mt-9 border-b border-line pb-2 text-[14.56px] font-semibold uppercase tracking-[0.08em] text-muted print:mt-6">{children}</h2>;
 }
 
 export function BriefView({ brief, savedNote, readOnly }: { brief: BriefContent; savedNote?: string; readOnly?: boolean }) {
@@ -41,7 +41,7 @@ export function BriefView({ brief, savedNote, readOnly }: { brief: BriefContent;
     <div>
       {!readOnly ? (
         <div className="no-print mb-6 rounded-xl border border-line bg-surface p-4 shadow-card">
-          <label htmlFor="note" className="mb-1.5 block text-[13px] font-medium">Note for leadership <span className="font-normal text-muted">(optional — appears at the top of the brief)</span></label>
+          <label htmlFor="note" className="mb-1.5 block text-[14.56px] font-medium">Note for leadership <span className="font-normal text-muted">(optional — appears at the top of the brief)</span></label>
           <Textarea id="note" value={note} onChange={(e) => setNote(e.target.value)} maxLength={1500} placeholder="e.g. Two things I need from you this month are the IT ticket and approval to shift $2.8k of budget." className="min-h-20" />
           <div className="mt-3 flex flex-wrap gap-2">
             <Button onClick={copy}>{copied ? <Check className="size-4" aria-hidden /> : <Copy className="size-4" aria-hidden />} {copied ? "Copied" : "Copy for email"}</Button>
@@ -57,14 +57,14 @@ export function BriefView({ brief, savedNote, readOnly }: { brief: BriefContent;
       )}
 
       <article className="rounded-2xl border border-line bg-surface px-6 py-8 shadow-card sm:px-10 sm:py-10 print-plain" aria-label="Leadership brief">
-        <p className="text-[11px] font-semibold uppercase tracking-[0.1em] text-muted">{brief.orgName} · Leadership brief</p>
+        <p className="text-[12.32px] font-semibold uppercase tracking-[0.1em] text-muted">{brief.orgName} · Leadership brief</p>
         <h1 className="mt-2 text-2xl leading-tight sm:text-[1.9rem]">{brief.headline}</h1>
         <p className="mt-3 text-sm text-muted">Performance: {brief.performanceWindow}<br />Activity: {brief.activityWindow}</p>
 
-        {note.trim() ? <blockquote className="mt-6 border-l-4 border-cue pl-4 text-[15px] italic text-soft">{note.trim()}</blockquote> : null}
+        {note.trim() ? <blockquote className="mt-6 border-l-4 border-cue pl-4 text-[16.8px] italic text-soft">{note.trim()}</blockquote> : null}
 
         <H>Summary</H>
-        <ul className="space-y-2 text-[15px] leading-relaxed">
+        <ul className="space-y-2 text-[16.8px] leading-relaxed">
           {brief.summary.map((s, i) => (
             <li key={i} className="flex gap-3"><span className="mt-2.5 size-1.5 shrink-0 rounded-full bg-ink" aria-hidden />{s}</li>
           ))}
@@ -98,7 +98,7 @@ export function BriefView({ brief, savedNote, readOnly }: { brief: BriefContent;
           <ul className="space-y-4">
             {brief.completed.map((c, i) => (
               <li key={i} className="print:break-inside-avoid">
-                <p className="text-[15px] font-medium leading-snug">{c.title}</p>
+                <p className="text-[16.8px] font-medium leading-snug">{c.title}</p>
                 <p className="mt-0.5 text-sm text-muted">{c.property} · {c.hours}h · finished {c.completedOn}</p>
                 {c.outcome && c.outcome.verdict !== "pending" ? (
                   <p className="mt-1.5 flex flex-wrap items-center gap-2 text-sm">
@@ -162,7 +162,7 @@ export function BriefView({ brief, savedNote, readOnly }: { brief: BriefContent;
         )}
 
         <H>How to read this</H>
-        <ul className="list-disc space-y-1 pl-5 text-[13px] text-muted">
+        <ul className="list-disc space-y-1 pl-5 text-[14.56px] text-muted">
           {brief.caveats.map((c, i) => <li key={i}>{c}</li>)}
           <li>Data: {brief.sources.join("; ")}.</li>
         </ul>

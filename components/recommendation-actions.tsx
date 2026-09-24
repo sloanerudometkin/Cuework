@@ -144,7 +144,7 @@ export function RecommendationActions({
                   </Field>
                 </div>
                 {owner1 ? (
-                  <p className="rounded-lg bg-sunken px-3 py-2 text-[13px] text-soft">
+                  <p className="rounded-lg bg-sunken px-3 py-2 text-[14.56px] text-soft">
                     {owner1.name} has <strong className="text-ink">{Math.round(owner1.remaining * 10) / 10}h</strong> unplanned this week.{" "}
                     {Number(hours) > owner1.remaining ? "This won't fit this week — you can still accept it and schedule it later." : "It fits this week."}
                   </p>

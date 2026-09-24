@@ -119,7 +119,7 @@ export function ImportWizard({
             </Field>
 
             <fieldset>
-              <legend className="mb-2 text-[13px] font-medium">What kind of export is it?</legend>
+              <legend className="mb-2 text-[14.56px] font-medium">What kind of export is it?</legend>
               <div className="grid gap-2 sm:grid-cols-2">
                 {DATASETS.map((d) => (
                   <label key={d} className={cn("flex cursor-pointer gap-3 rounded-xl border p-3.5 transition-colors has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-cue-700", dataset === d ? "border-ink bg-sunken/60" : "border-line hover:border-line-strong")}>
@@ -234,7 +234,7 @@ export function ImportWizard({
         <Card>
           <CardBody className="text-sm text-soft">
             <p className="font-medium text-ink">Tips</p>
-            <ul className="mt-2 list-disc space-y-1.5 pl-4 text-[13px]">
+            <ul className="mt-2 list-disc space-y-1.5 pl-4 text-[14.56px]">
               <li>Import <strong>Site totals</strong> first — KPIs, year-over-year and anomaly checks depend on them.</li>
               <li>Include 13+ months so year-over-year comparisons work.</li>
               <li>Files with any invalid row are rejected whole, so partial data never skews your reports.</li>

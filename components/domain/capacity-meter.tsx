@@ -43,7 +43,7 @@ export function CapacityMeter({
         <span aria-hidden className="absolute inset-y-0 w-px bg-ink/70" style={{ left: `${(1 / 1.2) * 100}%` }} />
       </div>
       {size === "md" ? (
-        <div className="mt-2 flex items-baseline justify-between gap-3 text-[13px]">
+        <div className="mt-2 flex items-baseline justify-between gap-3 text-[14.56px]">
           <span className="tabular text-ink">
             <strong className="font-semibold">{hoursLabel(planned)}</strong> <span className="text-muted">of {hoursLabel(plannable)}</span>
           </span>

@@ -7,7 +7,7 @@ export function EmptyState({ icon: Icon, title, children, action }: { icon: Luci
       <span className="grid size-11 place-items-center rounded-full bg-sunken text-soft">
         <Icon className="size-5" aria-hidden />
       </span>
-      <h3 className="mt-4 text-[15px] font-semibold">{title}</h3>
+      <h3 className="mt-4 text-[16.8px] font-semibold">{title}</h3>
       {children ? <p className="mt-1.5 max-w-md text-sm text-muted">{children}</p> : null}
       {action ? <div className="mt-5">{action}</div> : null}
     </div>

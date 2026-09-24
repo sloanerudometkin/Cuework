@@ -26,7 +26,7 @@ function Kpi({ k }: { k: KpiView }) {
   return (
     <div className="min-w-0">
       <p className="truncate text-xs text-muted">{k.label}</p>
-      <p className="tabular mt-0.5 text-[22px] font-semibold leading-tight tracking-tight">{k.display}</p>
+      <p className="tabular mt-0.5 text-[24.64px] font-semibold leading-tight tracking-tight">{k.display}</p>
       <div className="mt-1 flex flex-wrap items-center gap-x-3">
         <Delta value={k.mom} sentiment={k.momSentiment} label="MoM" />
         <Delta value={k.yoy} sentiment={k.yoySentiment} label="YoY" />
@@ -94,7 +94,7 @@ export default async function OverviewPage() {
                     <div className="flex min-w-0 flex-1 gap-4">
                       <span className={cn("mt-1 w-1 shrink-0 self-stretch rounded-full", TONE_BAR[a.tone])} aria-hidden />
                       <div className="min-w-0 flex-1">
-                        <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-muted">{TONE_LABEL[a.tone]}</p>
+                        <p className="text-[12.32px] font-semibold uppercase tracking-[0.08em] text-muted">{TONE_LABEL[a.tone]}</p>
                         <p className="mt-0.5 font-medium leading-snug">{a.title}</p>
                         <p className="mt-1 text-sm text-soft">{a.detail}</p>
                       </div>
@@ -193,7 +193,7 @@ export default async function OverviewPage() {
               <ul className="space-y-3 border-t border-line pt-4">
                 {plan.summary.members.map((m) => (
                   <li key={m.memberId}>
-                    <div className="mb-1.5 flex items-baseline justify-between text-[13px]">
+                    <div className="mb-1.5 flex items-baseline justify-between text-[14.56px]">
                       <span className="font-medium">{m.name}</span>
                       <span className="tabular text-muted">{hoursLabel(m.planned)} / {hoursLabel(m.plannable)}</span>
                     </div>
@@ -202,7 +202,7 @@ export default async function OverviewPage() {
                 ))}
               </ul>
               {rate != null ? (
-                <p className="rounded-lg bg-sunken px-3 py-2.5 text-[13px] leading-snug text-soft">
+                <p className="rounded-lg bg-sunken px-3 py-2.5 text-[14.56px] leading-snug text-soft">
                   Over the last {plan.history.weeks} weeks the team finished <strong className="font-semibold text-ink">{Math.round(rate * 100)}%</strong> of what it committed. Cuework plans to {Math.round((1 - plan.buffer) * 100)}% of capacity to leave room for the unexpected.
                 </p>
               ) : null}
@@ -251,7 +251,7 @@ export default async function OverviewPage() {
                   {p.atRisk.map(({ w, reason, kind }) => (
                     <li key={w.id} className="py-3">
                       <p className="text-sm font-medium leading-snug">{w.title}</p>
-                      <p className="mt-1 text-[13px] text-soft">{reason}</p>
+                      <p className="mt-1 text-[14.56px] text-soft">{reason}</p>
                       <div className="mt-2 flex gap-1.5">
                         <Badge tone="bad">{kind === "blocked" ? "Blocked" : "Over estimate"}</Badge>
                         {w.needsLeadership ? <Badge tone="cue">Needs leadership</Badge> : null}
@@ -278,7 +278,7 @@ export default async function OverviewPage() {
                   {p.wins.map((o) => (
                     <li key={o.id} className="py-3">
                       <p className="text-sm font-medium leading-snug">{o.workTitle}</p>
-                      <p className="mt-1 text-[13px] text-soft">
+                      <p className="mt-1 text-[14.56px] text-soft">
                         {o.target.label}: {formatMetricValue(o.target.metric, o.baselineValue)} → {formatMetricValue(o.target.metric, o.currentValue)} <span className="font-medium text-moss">({formatPct(o.changePct)})</span>
                       </p>
                       <div className="mt-2 flex items-center gap-2">

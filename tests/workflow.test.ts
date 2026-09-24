@@ -138,7 +138,7 @@ describe("capacity-aware weekly commitment", () => {
     const plan = await getWeekPlan(db, orgId, WEEK);
     expect(plan.commitment?.status).toBe("committed");
     expect(plan.summary.canCommit).toBe(true);
-    expect(plan.summary.totalPlannable).toBe(54); // Maya 28 + Jordan 26 (out Friday)
+    expect(plan.summary.totalPlannable).toBe(54); // Maya 28 + Kathleen 26 (out Friday)
     expect(plan.summary.totalRemaining).toBeGreaterThan(20);
     expect(plan.candidates.length).toBeGreaterThan(2);
     expect(plan.history.rate).not.toBeNull();
@@ -441,10 +441,10 @@ describe("history integrity", () => {
       expect(carried).toHaveLength(2); // the seeded routine items that were dropped in earlier weeks
       expect(before.history.rate).toBeCloseTo(0.67, 1);
 
-      const jordan = before.members.find((m) => m.name.startsWith("Jordan"))!;
+      const kathleen = before.members.find((m) => m.name.startsWith("Kathleen"))!;
       await saveWeekPlan(fresh.db, {
         orgId: seeded.orgId, actor: me, weekStart: WEEK, commit: true, now: NOW,
-        items: [...before.items.map((i) => ({ id: i.id, assigneeId: i.assigneeId })), ...carried.map((c) => ({ id: c.id, assigneeId: jordan.id }))],
+        items: [...before.items.map((i) => ({ id: i.id, assigneeId: i.assigneeId })), ...carried.map((c) => ({ id: c.id, assigneeId: kathleen.id }))],
         capacity: before.members.map((m) => ({ memberId: m.id, totalHours: m.totalHours, reservedHours: m.reservedHours })),
       });
 

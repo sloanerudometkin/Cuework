@@ -42,12 +42,12 @@ function NavLinks({ shell, onNavigate }: { shell: ShellData; onNavigate?: () => 
     const badge = "badge" in n ? n.badge : undefined;
     let chip: React.ReactNode = null;
     if (badge === "open" && shell.openRecommendations > 0)
-      chip = <span className="tabular rounded-full bg-cue px-1.5 text-[11px] font-semibold leading-5 text-ink">{shell.openRecommendations}</span>;
+      chip = <span className="tabular rounded-full bg-cue px-1.5 text-[12.32px] font-semibold leading-5 text-ink">{shell.openRecommendations}</span>;
     if (badge === "blocked" && shell.blockedWork > 0)
-      chip = <span className="tabular rounded-full bg-brick px-1.5 text-[11px] font-semibold leading-5 text-white" title="Blocked items">{shell.blockedWork}</span>;
+      chip = <span className="tabular rounded-full bg-brick px-1.5 text-[12.32px] font-semibold leading-5 text-white" title="Blocked items">{shell.blockedWork}</span>;
     if (badge === "week" && shell.weekUtilization != null)
       chip = (
-        <span className={cn("tabular text-[11px] font-medium", shell.weekStatus === "over" ? "text-[#f0a79f]" : shell.weekStatus === "tight" ? "text-cue" : "text-side-muted")}>
+        <span className={cn("tabular text-[12.32px] font-medium", shell.weekStatus === "over" ? "text-[#f0a79f]" : shell.weekStatus === "tight" ? "text-cue" : "text-side-muted")}>
           {Math.round(shell.weekUtilization * 100)}%
         </span>
       );
@@ -72,7 +72,7 @@ function NavLinks({ shell, onNavigate }: { shell: ShellData; onNavigate?: () => 
   return (
     <nav aria-label="Primary" className="flex flex-1 flex-col">
       <ul className="space-y-0.5">{NAV.map(item)}</ul>
-      <p className="mb-2 mt-7 px-3 text-[11px] font-semibold uppercase tracking-[0.08em] text-side-muted">Workspace</p>
+      <p className="mb-2 mt-7 px-3 text-[12.32px] font-semibold uppercase tracking-[0.08em] text-side-muted">Workspace</p>
       <ul className="space-y-0.5">{SECONDARY.map(item)}</ul>
     </nav>
   );
@@ -81,7 +81,7 @@ function NavLinks({ shell, onNavigate }: { shell: ShellData; onNavigate?: () => 
 function SidebarBody({ shell, user, onNavigate }: { shell: ShellData; user: { name: string; email: string }; onNavigate?: () => void }) {
   return (
     <div className="flex h-full flex-col gap-6">
-      <Logo variant="reverse" height={26} className="ml-1" />
+      <Logo variant="reverse" height={48} className="ml-1" />
       <div className="rounded-lg border border-white/10 bg-white/5 px-3 py-2.5">
         <p className="truncate text-sm font-medium text-white">{shell.orgName}</p>
         <div className="mt-1 flex items-center gap-2 text-xs text-side-muted">
@@ -94,7 +94,7 @@ function SidebarBody({ shell, user, onNavigate }: { shell: ShellData; user: { na
         <p className="truncate text-sm font-medium text-white">{user.name}</p>
         <p className="truncate text-xs text-side-muted">{user.email}</p>
         <form action={logoutAction} className="mt-3">
-          <button className="inline-flex items-center gap-2 rounded-lg px-1 py-1 text-[13px] text-side-text hover:text-white">
+          <button className="inline-flex items-center gap-2 rounded-lg px-1 py-1 text-[14.56px] text-side-text hover:text-white">
             <LogOut className="size-4" aria-hidden /> Sign out
           </button>
         </form>
@@ -113,7 +113,7 @@ export function AppShell({ shell, user, children }: { shell: ShellData; user: { 
 
       <header className="no-print sticky top-0 z-30 flex h-14 items-center justify-between bg-ink px-4 lg:hidden">
         <Link href="/overview" aria-label="Cuework home">
-          <LogoMark variant="reverse" size={30} />
+          <LogoMark variant="reverse" size={48} />
         </Link>
         <p className="mx-3 min-w-0 flex-1 truncate text-sm font-medium text-white">{shell.orgName}</p>
         <Dialog open={open} onOpenChange={setOpen}>

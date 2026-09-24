@@ -77,7 +77,7 @@ function Card({ item, onOpen }: { item: BoardItem; onOpen: () => void }) {
       )}
     >
       <span className="flex items-start gap-2.5">
-        <span className="min-w-0 flex-1 text-[13.5px] font-medium leading-snug">{item.title}</span>
+        <span className="min-w-0 flex-1 text-[15.12px] font-medium leading-snug">{item.title}</span>
         <PriorityChip score={item.priorityScore} size="sm" showLabel={false} />
       </span>
       <span className="mt-2.5 flex flex-wrap items-center gap-1.5">
@@ -86,7 +86,7 @@ function Card({ item, onOpen }: { item: BoardItem; onOpen: () => void }) {
       </span>
       <span className="mt-3 flex items-center justify-between gap-2">
         <span className="flex items-center gap-2">
-          <span className="grid size-6 place-items-center rounded-full bg-sunken text-[10px] font-semibold text-soft" aria-hidden>{initials(item.assigneeName)}</span>
+          <span className="grid size-6 place-items-center rounded-full bg-sunken text-[11.2px] font-semibold text-soft" aria-hidden>{initials(item.assigneeName)}</span>
           <span className="sr-only">Owner: {item.assigneeName ?? "unassigned"}</span>
           <span className="tabular text-xs text-muted">
             {item.status === "in_progress" || item.status === "complete" ? `${hoursLabel(item.hoursSpent)} / ` : ""}

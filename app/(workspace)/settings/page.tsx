@@ -60,7 +60,7 @@ export default async function SettingsPage() {
         </Section>
 
         <Section id="team" title="Team members" description="Each person's default weekly capacity. Override it for any single week in the plan." action={<MemberDialog trigger="add" canAdd={canAddMember} />}>
-          {!canAddMember ? <p className="mb-3 rounded-lg bg-cue-soft px-3 py-2 text-[13px] text-cue-700">{checkLimit(ws.planKey, "teamMembers", ws.usage).message}</p> : null}
+          {!canAddMember ? <p className="mb-3 rounded-lg bg-cue-soft px-3 py-2 text-[14.56px] text-cue-700">{checkLimit(ws.planKey, "teamMembers", ws.usage).message}</p> : null}
           <ul className="divide-y divide-line">
             {ws.team.map((m) => (
               <li key={m.id} className="flex items-center gap-4 py-3">
@@ -77,7 +77,7 @@ export default async function SettingsPage() {
         </Section>
 
         <Section id="properties" title="Properties" description="The brands and websites in this workspace." action={<PropertyDialog trigger="add" canAdd={canAddProperty} />}>
-          {!canAddProperty ? <p className="mb-3 rounded-lg bg-cue-soft px-3 py-2 text-[13px] text-cue-700">{checkLimit(ws.planKey, "properties", ws.usage).message}</p> : null}
+          {!canAddProperty ? <p className="mb-3 rounded-lg bg-cue-soft px-3 py-2 text-[14.56px] text-cue-700">{checkLimit(ws.planKey, "properties", ws.usage).message}</p> : null}
           {ws.properties.length ? (
             <ul className="divide-y divide-line">
               {ws.properties.map((p) => (

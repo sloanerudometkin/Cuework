@@ -17,9 +17,9 @@ export const buttonStyles = cva(
         onDark: "bg-white/10 text-white hover:bg-white/15 border border-white/15",
       },
       size: {
-        sm: "h-8 px-3 text-[13px]",
+        sm: "h-8 px-3 text-[14.56px]",
         md: "h-10 px-4 text-sm",
-        lg: "h-12 px-6 text-[15px]",
+        lg: "h-12 px-6 text-[16.8px]",
         icon: "h-9 w-9",
       },
     },
