@@ -170,4 +170,4 @@ The simplest credible path: **container image → Amazon ECR → AWS App Runner 
 
 ## License
 
-Private / unreleased. Logo files in `brand assets/` are the supplied originals; web copies in `public/brand/` are byte-identical artwork with embedded C2PA provenance metadata stripped.
+No license is granted; all rights reserved. This is a portfolio/demo project — code is here for review, not for reuse. Logo files in `brand assets/` are the supplied originals; web copies in `public/brand/` are byte-identical artwork with embedded C2PA provenance metadata stripped.
