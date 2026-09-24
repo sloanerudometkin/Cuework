@@ -1,13 +1,69 @@
 # Cuework
 
-An AI-ready marketing operating system for small, overloaded teams running several brands.
-It turns fragmented marketing data into expert priorities, **realistic weekly commitments**, completed work and leadership-ready reporting — in one connected loop:
+**An AI-ready marketing operating system for small, overloaded teams running several brands.**
+
+![Next.js](https://img.shields.io/badge/Next.js-16-000000?logo=next.js&logoColor=white)
+![TypeScript](https://img.shields.io/badge/TypeScript-5-3178C6?logo=typescript&logoColor=white)
+![Tailwind CSS](https://img.shields.io/badge/Tailwind_CSS-4-38BDF8?logo=tailwindcss&logoColor=white)
+![PostgreSQL](https://img.shields.io/badge/PostgreSQL-16-4169E1?logo=postgresql&logoColor=white)
+![Tests](https://img.shields.io/badge/tests-105_passing-2EA44F?logo=vitest&logoColor=white)
+![Status](https://img.shields.io/badge/status-MVP-D9691D)
+
+## Contents
+
+- [Overview](#overview)
+- [The problem](#the-problem)
+- [Mission](#mission)
+- [How it works](#how-it-works)
+- [Quick start](#quick-start)
+- [Commands](#commands)
+- [Testing](#testing)
+- [Architecture](#architecture)
+- [Environment variables](#environment-variables)
+- [AWS deployment](#aws-deployment)
+- [What is fully functional](#what-is-fully-functional)
+- [What is simulated or deferred](#what-is-simulated-or-deferred)
+- [Known limitations](#known-limitations)
+- [Roadmap](#roadmap)
+- [License](#license)
+- [Author](#author)
+
+## Overview
+
+Cuework is a marketing operating system built for small teams — often just one or two people — who are responsible for SEO, paid media, analytics and reporting across multiple brands, properties or websites at once.
+
+It replaces the usual sprawl of dashboards, spreadsheets, consultant reports and task trackers with one connected loop: performance data becomes expert-ranked priorities, priorities become a weekly plan the team can actually finish, finished work becomes measured outcomes, and outcomes roll up into a report leadership can trust — automatically, every week.
+
+This repository is a working MVP. It ships a sample workspace with three **fictional** Harborline properties (an authority website, a ferry service and an airport), clearly labelled as demo data throughout, so the whole product can be evaluated end to end without connecting real accounts.
+
+## The problem
+
+A small marketing team managing several brands or properties typically runs into the same wall:
+
+1. Paid and organic performance analysis comes from outside consultants the team can't continuously reproduce in-house.
+2. Search Console, Google Ads, GA4 and other tools are reviewed separately, across properties that share one team and one budget.
+3. Prioritization happens informally — whoever's loudest or most recent wins, not necessarily what matters most.
+4. Recommendations have to be manually translated into actual work, and often aren't.
+5. Plans ignore real team capacity, so work stays unfinished and commitments slip.
+6. Analytics gets exported into spreadsheets by hand for month-over-month and year-over-year reporting.
+7. Leadership reporting ends up disconnected from the data, decisions and work that actually produced the results.
+8. Institutional knowledge is scattered across dashboards, spreadsheets, emails, consultants and task tools — nothing remembers what was tried or why.
+
+Cuework exists to connect that entire loop, so a lean team gets the strategic clarity and operational leverage of a much larger department.
+
+## Mission
+
+**Turn fragmented marketing data into expert priorities, realistic weekly commitments, completed work and leadership-ready reporting — all in one place.**
+
+Cuework's goal is for the person running it to feel like the product understands their real constraints: their actual team capacity, their actual budget, their actual properties — and tells them exactly what matters this week, instead of handing them another dashboard to interpret alone.
+
+## How it works
 
 ```
 DATA → RECOMMENDATION → PRIORITY → CAPACITY-AWARE WEEKLY COMMITMENT → COMPLETED WORK → OUTCOME → LEADERSHIP REPORT
 ```
 
-This repository is the one-day MVP. It ships a sample workspace with three **fictional** Harborline properties (an authority, a ferry service and an airport), clearly labelled as demo data.
+Every step is traceable back to the one before it: a recommendation cites the exact source data behind it, a work item carries the recommendation that spawned it, and an outcome is always computed from the same re-measurable metric, never typed in by hand.
 
 ## Quick start
 
@@ -90,7 +146,7 @@ lib/seed/               Deterministic demo-data generator + demo workspace orche
 lib/auth/               Signed-cookie sessions (jose) and scrypt password hashing.
 ```
 
-**Separation of concerns** (as specified): ingestion (`csv` + `services/imports`), metric calculation (`metrics`), recommendation generation (`recommendations/`), prioritization (`prioritization`), capacity planning (`capacity` + `services/planning`), reporting (`reporting` + `services/reports`) and entitlements (`entitlements`) are separate modules that don't import each other's internals.
+**Separation of concerns**: ingestion (`csv` + `services/imports`), metric calculation (`metrics`), recommendation generation (`recommendations/`), prioritization (`prioritization`), capacity planning (`capacity` + `services/planning`), reporting (`reporting` + `services/reports`) and entitlements (`entitlements`) are separate modules that don't import each other's internals.
 
 **Traceability** is enforced by foreign keys:
 `data source → metric snapshot ← recommendation evidence → recommendation → decision → work item → outcome → leadership report`.
@@ -162,7 +218,7 @@ The simplest credible path: **container image → Amazon ECR → AWS App Runner 
 * Dates use UTC; a team's "week" and "month" boundaries follow UTC.
 * Light theme only.
 
-## Recommended next three improvements
+## Roadmap
 
 1. **Google connectors (GA4, Search Console, Google Ads)** behind the existing import pipeline, with OAuth, incremental sync and per-source freshness — then remove the CSV step for most users.
 2. **Team collaboration**: invitations, roles (owner / editor / viewer), comments on recommendations, and scheduled leadership-brief delivery by email/Slack.
@@ -171,3 +227,7 @@ The simplest credible path: **container image → Amazon ECR → AWS App Runner 
 ## License
 
 No license is granted; all rights reserved. This is a portfolio/demo project — code is here for review, not for reuse. Logo files in `brand assets/` are the supplied originals; web copies in `public/brand/` are byte-identical artwork with embedded C2PA provenance metadata stripped.
+
+## Author
+
+Built by [Sloane Rudometkin](https://github.com/sloanerudometkin).
