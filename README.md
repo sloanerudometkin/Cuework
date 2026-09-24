@@ -53,9 +53,9 @@ Cuework exists to connect that entire loop, so a lean team gets the strategic cl
 
 ## Mission
 
-**Turn fragmented marketing data into expert priorities, realistic weekly commitments, completed work and leadership-ready reporting — all in one place.**
+**Give small marketing teams the expertise and leverage of a much larger department — by collapsing scattered tools into one place and taking the guesswork out of what to do next.**
 
-Cuework's goal is for the person running it to feel like the product understands their real constraints: their actual team capacity, their actual budget, their actual properties — and tells them exactly what matters this week, instead of handing them another dashboard to interpret alone.
+Cuework closes two gaps at once: it removes the friction of stitching together dashboards, spreadsheets and consultant reports into one connected workspace, and it removes the burden of deciding what matters most by ranking work with the same judgment an expert strategist would apply — impact, urgency, and fit against real team capacity. The person running it should feel like the product already knows their constraints and tells them exactly what to do this week, instead of handing them more data to interpret alone.
 
 ## How it works
 
