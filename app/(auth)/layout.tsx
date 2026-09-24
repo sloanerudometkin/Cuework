@@ -8,13 +8,13 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
     <div className="grid min-h-dvh lg:grid-cols-[minmax(0,5fr)_minmax(0,6fr)]">
       <aside className="relative hidden flex-col justify-between overflow-hidden bg-ink p-12 text-white lg:flex">
         <Link href="/" aria-label="Cuework home">
-          <Logo variant="reverse" height={44} />
+          <Logo variant="reverse" height={60} />
         </Link>
         <div>
           <h2 className="max-w-md text-[2rem] font-semibold leading-tight tracking-tight">
             Priorities your team can <span className="text-cue">actually finish.</span>
           </h2>
-          <p className="mt-4 max-w-md text-[15px] leading-relaxed text-side-text">
+          <p className="mt-4 max-w-md text-[16.8px] leading-relaxed text-side-text">
             Cuework connects your data to expert recommendations, a weekly plan that respects real capacity, completed work, and a report leadership can trust.
           </p>
           <ol className="mt-10 space-y-3" aria-label="How Cuework works">
@@ -30,7 +30,7 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
       </aside>
       <div className="flex flex-col px-5 py-8 sm:px-10">
         <Link href="/" className="mb-10 lg:hidden" aria-label="Cuework home">
-          <Logo height={32} />
+          <Logo height={44} />
         </Link>
         <main id="main" className="m-auto w-full max-w-[26rem]">
           {children}

@@ -77,9 +77,9 @@ export async function seedDemoWorkspace(db: Db, now = new Date()): Promise<SeedR
     .insert(teamMembers)
     .values({ orgId, userId: user.id, name: "Maya Okafor", title: "Digital Marketing Manager", roleKey: "manager", defaultWeeklyHours: 40, defaultReservedHours: 12 })
     .returning();
-  const [jordan] = await db
+  const [kathleen] = await db
     .insert(teamMembers)
-    .values({ orgId, name: "Jordan Ellis", title: "Digital Marketing Coordinator", roleKey: "coordinator", defaultWeeklyHours: 40, defaultReservedHours: 6 })
+    .values({ orgId, name: "Kathleen Makowski", title: "Digital Marketing Coordinator", roleKey: "coordinator", defaultWeeklyHours: 40, defaultReservedHours: 6 })
     .returning();
 
   // --- Properties, data sources, snapshots ----------------------------------
@@ -191,7 +191,7 @@ export async function seedDemoWorkspace(db: Db, now = new Date()): Promise<SeedR
       expectedOutcome: "Lift the /fares conversion rate by 5–10% with no extra traffic.",
       nextStep: "Split traffic 50/50 between the current and price-led CTA for two weeks and read the result at 95% confidence.",
       whyNow: "Summer demand meant every point of conversion rate was worth real revenue.",
-      target: faresConv, impact: 4, effort: 3, urgency: 4, confidence: 0.7, est: 10, spent: 11, owner: jordan, ownerRole: "coordinator", experiment: true, daysBeforeMonthEnd: 25,
+      target: faresConv, impact: 4, effort: 3, urgency: 4, confidence: 0.7, est: 10, spent: 11, owner: kathleen, ownerRole: "coordinator", experiment: true, daysBeforeMonthEnd: 25,
       evidence: (v) => [{ label: "Conversion rate, prior month", value: fmt(faresConv, v(faresConv, prev)) }, { label: "Monthly sessions", value: "≈ 22k", comparison: "one of the top booking-path pages" }],
       decisionNote: "Worth testing properly — the fares page is where bookings are won or lost.",
     },
@@ -213,7 +213,7 @@ export async function seedDemoWorkspace(db: Db, now = new Date()): Promise<SeedR
       expectedOutcome: "Increase impressions for question-style security queries and earn answer-engine citations.",
       nextStep: "Add 40–60 word answers and FAQ structured data to the security page; track question-query impressions monthly.",
       whyNow: "Low effort and question queries were already growing.",
-      target: stroller, impact: 3, effort: 2, urgency: 3, confidence: 0.6, est: 6, spent: 6.5, owner: jordan, ownerRole: "coordinator", daysBeforeMonthEnd: 12,
+      target: stroller, impact: 3, effort: 2, urgency: 3, confidence: 0.6, est: 6, spent: 6.5, owner: kathleen, ownerRole: "coordinator", daysBeforeMonthEnd: 12,
       evidence: (v) => [{ label: "Impressions, prior month", value: fmt(stroller, v(stroller, prev)), comparison: "“can i bring a stroller through security”" }],
       decisionNote: "Cheap, and a good pilot for AEO on the other properties.",
     },
@@ -224,7 +224,7 @@ export async function seedDemoWorkspace(db: Db, now = new Date()): Promise<SeedR
       expectedOutcome: "Recover organic sessions on /notices and stop further ranking erosion there.",
       nextStep: "Map legacy URLs to their final destinations with single 301 redirects and resubmit the sitemap.",
       whyNow: "/notices had the steepest traffic decline after the site migration.",
-      target: notices, impact: 4, effort: 2, urgency: 4, confidence: 0.7, est: 5, spent: 5, owner: jordan, ownerRole: "coordinator", daysBeforeMonthEnd: 5,
+      target: notices, impact: 4, effort: 2, urgency: 4, confidence: 0.7, est: 5, spent: 5, owner: kathleen, ownerRole: "coordinator", daysBeforeMonthEnd: 5,
       evidence: (v) => [{ label: "Organic sessions, prior month", value: fmt(notices, v(notices, prev)), comparison: "/notices" }, { label: "Redirect hops on legacy URLs", value: "2–3", comparison: "should be 1" }],
       decisionNote: "Quick, technical, and directly tied to the migration fallout.",
     },
@@ -235,7 +235,7 @@ export async function seedDemoWorkspace(db: Db, now = new Date()): Promise<SeedR
       expectedOutcome: "Faster indexing of current pages and steadier organic clicks.",
       nextStep: "Regenerate the sitemap from live URLs only, resubmit, and monitor the coverage report.",
       whyNow: "Small fix that removes an ongoing drag on crawling.",
-      target: authClicks, impact: 2, effort: 1, urgency: 3, confidence: 0.6, est: 4, spent: 4, owner: jordan, ownerRole: "coordinator",
+      target: authClicks, impact: 2, effort: 1, urgency: 3, confidence: 0.6, est: 4, spent: 4, owner: kathleen, ownerRole: "coordinator",
       evidence: () => [{ label: "Sitemap errors in Search Console", value: "37 URLs", comparison: "404 or redirected" }],
       decisionNote: "Do it — cheap hygiene after the migration.",
     },
@@ -245,10 +245,10 @@ export async function seedDemoWorkspace(db: Db, now = new Date()): Promise<SeedR
     { week: -6, prop: "authority", title: "Monthly reporting refresh — July close", category: "analytics", est: 5, done: true, owner: maya },
     { week: -5, prop: "ferry", title: "Quarterly keyword review", category: "sem", est: 6, done: true, owner: maya },
     { week: -4, prop: "airport", title: "GA4 conversion audit", category: "analytics", est: 8, done: true, owner: maya },
-    { week: -3, prop: "authority", title: "Refresh homepage hero copy", category: "content", est: 5, done: false, owner: jordan },
+    { week: -3, prop: "authority", title: "Refresh homepage hero copy", category: "content", est: 5, done: false, owner: kathleen },
     { week: -2, prop: "ferry", title: "Prepare consultant sync deck", category: "analytics", est: 3, done: true, owner: maya },
     { week: -1, prop: "authority", title: "Build Q3 report template", category: "analytics", est: 6, done: true, owner: maya },
-    { week: -1, prop: "airport", title: "Competitor SERP review", category: "seo", est: 8, done: false, owner: jordan },
+    { week: -1, prop: "airport", title: "Competitor SERP review", category: "seo", est: 8, done: false, owner: kathleen },
   ];
 
   // Commitments are created lazily per week so history can be anchored to real dates.
@@ -378,14 +378,14 @@ export async function seedDemoWorkspace(db: Db, now = new Date()): Promise<SeedR
   });
   const ferryCtr = await decideRecommendation(db, {
     orgId, actor, now, recommendationId: rec(`low_ctr:${propertyIds.ferry}:ferry schedule`).id,
-    input: { decision: "accept", addToBacklog: true, ownerId: jordan.id, rationale: "Biggest visibility-to-click gap on our most strategic property." },
+    input: { decision: "accept", addToBacklog: true, ownerId: kathleen.id, rationale: "Biggest visibility-to-click gap on our most strategic property." },
   });
   const paidWaste = await decideRecommendation(db, {
     orgId, actor, now, recommendationId: rec(`paid_waste:${propertyIds.ferry}`).id,
     input: { decision: "accept", addToBacklog: true, ownerId: maya.id, rationale: "Fast win — we can redeploy this spend before the summer peak ends." },
   });
   const yoy = await acceptAndPlan(`yoy_decline:${propertyIds.authority}`, maya.id);
-  const aeo = await acceptAndPlan(`aeo_gap:${propertyIds.airport}`, jordan.id);
+  const aeo = await acceptAndPlan(`aeo_gap:${propertyIds.airport}`, kathleen.id);
   await acceptAndPlan(`budget_imbalance:${propertyIds.ferry}`, maya.id); // backlog only, not yet scheduled
 
   await decideRecommendation(db, {
@@ -401,19 +401,19 @@ export async function seedDemoWorkspace(db: Db, now = new Date()): Promise<SeedR
     input: { decision: "refine", rationale: "Split this into desktop vs. mobile and checkout vs. schedule-to-booking before we commit 8 hours to it." },
   });
 
-  // Team capacity for this week: Jordan is out on Friday.
+  // Team capacity for this week: Kathleen is out on Friday.
   await saveWeekPlan(db, {
     orgId, weekStart: week, actor, now, commit: true,
     capacity: [
       { memberId: maya.id, totalHours: 40, reservedHours: 12, note: "Standing meetings, leadership syncs, consultant call" },
-      { memberId: jordan.id, totalHours: 32, reservedHours: 6, note: "Out Friday (−8h)" },
+      { memberId: kathleen.id, totalHours: 32, reservedHours: 6, note: "Out Friday (−8h)" },
     ],
     items: [
       { id: tracking.workItemId!, assigneeId: maya.id },
-      { id: ferryCtr.workItemId!, assigneeId: jordan.id },
+      { id: ferryCtr.workItemId!, assigneeId: kathleen.id },
       { id: paidWaste.workItemId!, assigneeId: maya.id },
       { id: yoy.workItemId!, assigneeId: maya.id },
-      { id: aeo.workItemId!, assigneeId: jordan.id },
+      { id: aeo.workItemId!, assigneeId: kathleen.id },
     ],
   });
 

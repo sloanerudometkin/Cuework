@@ -79,7 +79,7 @@ export default async function PerformancePage({ searchParams }: { searchParams: 
               {c.list.length ? (
                 <ul className="space-y-2">
                   {c.list.slice(0, 5).map((l, i) => (
-                    <li key={i} className="flex gap-2 text-[13px] leading-snug">
+                    <li key={i} className="flex gap-2 text-[14.56px] leading-snug">
                       {c.title === "Anomalies" ? <TriangleAlert className={cn("mt-0.5 size-3.5 shrink-0", l.bad ? "text-brick" : "text-slate")} aria-hidden /> : <span className={cn("mt-1.5 size-1.5 shrink-0 rounded-full", c.tone === "good" ? "bg-moss" : "bg-brick")} aria-hidden />}
                       <span>{l.text}</span>
                     </li>
@@ -147,13 +147,13 @@ export default async function PerformancePage({ searchParams }: { searchParams: 
                   <ComparisonChart metric={k.metric} current={k.series} previous={k.previousYearSeries.slice(-k.series.length)} name={`${current.property.name} ${k.label}`} />
                 </div>
                 <div className="mt-4 border-t border-line pt-4">
-                  <p className="mb-2 text-[11px] font-semibold uppercase tracking-[0.08em] text-muted">Completed work that targeted this ({def.label.toLowerCase()})</p>
+                  <p className="mb-2 text-[12.32px] font-semibold uppercase tracking-[0.08em] text-muted">Completed work that targeted this ({def.label.toLowerCase()})</p>
                   {!tracking ? (
-                    <p className="flex items-center gap-2 text-[13px] text-muted"><Lock className="size-3.5" aria-hidden /> Outcome tracking is included in Growth and above.</p>
+                    <p className="flex items-center gap-2 text-[14.56px] text-muted"><Lock className="size-3.5" aria-hidden /> Outcome tracking is included in Growth and above.</p>
                   ) : related.length ? (
                     <ul className="space-y-2.5">
                       {related.map((o) => (
-                        <li key={o.id} className="text-[13px] leading-snug">
+                        <li key={o.id} className="text-[14.56px] leading-snug">
                           <p className="font-medium">{o.workTitle}</p>
                           <p className="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-1 text-muted">
                             {o.completedAt ? <span>Done {formatDay(toISODate(o.completedAt))}</span> : null}
@@ -164,7 +164,7 @@ export default async function PerformancePage({ searchParams }: { searchParams: 
                       ))}
                     </ul>
                   ) : (
-                    <p className="text-[13px] text-muted">No completed work has targeted this metric yet.</p>
+                    <p className="text-[14.56px] text-muted">No completed work has targeted this metric yet.</p>
                   )}
                 </div>
               </CardBody>
@@ -187,7 +187,7 @@ export default async function PerformancePage({ searchParams }: { searchParams: 
           {(["correlation", "corroborated", "experiment"] as const).map((s) => (
             <div key={s} className="rounded-xl border border-line bg-surface p-4">
               <EvidenceBadge strength={s} />
-              <p className="mt-2 text-[13px] leading-snug text-soft">{EVIDENCE_LABEL[s].long}</p>
+              <p className="mt-2 text-[14.56px] leading-snug text-soft">{EVIDENCE_LABEL[s].long}</p>
             </div>
           ))}
         </div>

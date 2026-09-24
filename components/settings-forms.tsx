@@ -197,7 +197,7 @@ export function PlanSwitcher({ current, interval: initial }: { current: PlanKey;
     <div>
       <div className="mb-4 inline-flex rounded-lg bg-sunken p-1" role="group" aria-label="Billing interval">
         {(["month", "year"] as const).map((i) => (
-          <button key={i} type="button" aria-pressed={interval === i} onClick={() => setInterval(i)} className={cn("rounded-md px-3 py-1.5 text-[13px] font-medium", interval === i ? "bg-surface text-ink shadow-card" : "text-soft hover:text-ink")}>
+          <button key={i} type="button" aria-pressed={interval === i} onClick={() => setInterval(i)} className={cn("rounded-md px-3 py-1.5 text-[14.56px] font-medium", interval === i ? "bg-surface text-ink shadow-card" : "text-soft hover:text-ink")}>
             {i === "month" ? "Monthly" : "Annual (save ~17%)"}
           </button>
         ))}

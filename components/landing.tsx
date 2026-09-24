@@ -23,7 +23,7 @@ export function LandingPage() {
         <section className="bg-ink text-white">
           <div className="mx-auto grid max-w-6xl gap-12 px-5 py-16 sm:px-8 lg:grid-cols-[minmax(0,1.1fr)_minmax(0,0.9fr)] lg:items-center lg:py-24">
             <div>
-              <p className="text-[11px] font-semibold uppercase tracking-[0.1em] text-cue">Marketing operating system</p>
+              <p className="text-[12.32px] font-semibold uppercase tracking-[0.1em] text-cue">Marketing operating system</p>
               <h1 className="mt-4 text-4xl leading-[1.08] sm:text-5xl lg:text-[3.4rem]">Turn scattered marketing data into work your team can <span className="text-cue">actually finish.</span></h1>
               <p className="mt-6 max-w-xl text-lg leading-relaxed text-side-text">For small teams running several brands. Cuework turns fragmented data into expert priorities, realistic weekly commitments, completed work and leadership-ready reporting — in one place.</p>
               <div className="mt-8 flex flex-wrap gap-3">
@@ -34,7 +34,7 @@ export function LandingPage() {
             </div>
 
             <div className="rounded-2xl bg-surface p-6 text-ink shadow-pop" aria-label="Illustration of the weekly plan">
-              <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-muted">Illustration · a week that can&apos;t be over-committed</p>
+              <p className="text-[12.32px] font-semibold uppercase tracking-[0.08em] text-muted">Illustration · a week that can&apos;t be over-committed</p>
               <div className="mt-4 space-y-4">
                 {[{ n: "Maya", p: 26.5, c: 28, s: "tight" as const }, { n: "Jordan", p: 31, c: 26, s: "over" as const }].map((m) => (
                   <div key={m.n}>
@@ -69,8 +69,8 @@ export function LandingPage() {
             {FEATURES.map((f) => (
               <div key={f.title} className="rounded-2xl border border-line bg-surface p-6 shadow-card">
                 <span className="grid size-10 place-items-center rounded-lg bg-sunken"><f.icon className="size-5" aria-hidden /></span>
-                <h3 className="mt-4 text-[17px]">{f.title}</h3>
-                <p className="mt-2 text-[15px] leading-relaxed text-soft">{f.body}</p>
+                <h3 className="mt-4 text-[19.04px]">{f.title}</h3>
+                <p className="mt-2 text-[16.8px] leading-relaxed text-soft">{f.body}</p>
               </div>
             ))}
           </div>

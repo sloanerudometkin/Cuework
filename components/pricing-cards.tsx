@@ -37,7 +37,7 @@ export function PricingCards() {
                 <span className="text-5xl font-semibold tracking-tight">${price}</span>
                 <span className={cn("text-sm", hi ? "text-side-muted" : "text-muted")}>/ month{annual ? ", billed annually" : ""}</span>
               </p>
-              <p className={cn("mt-4 text-[15px] leading-snug", hi ? "text-side-text" : "text-soft")}>{p.tagline}</p>
+              <p className={cn("mt-4 text-[16.8px] leading-snug", hi ? "text-side-text" : "text-soft")}>{p.tagline}</p>
               <Link href="/signup" className={cn(buttonStyles({ variant: hi ? "cue" : "primary", size: "lg" }), "mt-6 w-full")}>{CTA[k]}</Link>
               <ul className="mt-7 space-y-3 border-t pt-6 text-sm" style={{ borderColor: hi ? "rgb(255 255 255 / 0.12)" : "var(--color-line)" }}>
                 {p.features.map((f) => (

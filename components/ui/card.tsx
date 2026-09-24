@@ -10,7 +10,7 @@ export function CardHeader({ className, ...props }: React.HTMLAttributes<HTMLDiv
 }
 
 export function CardTitle({ className, ...props }: React.HTMLAttributes<HTMLHeadingElement>) {
-  return <h2 className={cn("text-[15px] font-semibold text-ink", className)} {...props} />;
+  return <h2 className={cn("text-[16.8px] font-semibold text-ink", className)} {...props} />;
 }
 
 export function CardBody({ className, ...props }: React.HTMLAttributes<HTMLDivElement>) {
@@ -19,5 +19,5 @@ export function CardBody({ className, ...props }: React.HTMLAttributes<HTMLDivEl
 
 /** Small uppercase label used above groups of content. */
 export function Eyebrow({ className, ...props }: React.HTMLAttributes<HTMLParagraphElement>) {
-  return <p className={cn("text-[11px] font-semibold uppercase tracking-[0.08em] text-muted", className)} {...props} />;
+  return <p className={cn("text-[12.32px] font-semibold uppercase tracking-[0.08em] text-muted", className)} {...props} />;
 }

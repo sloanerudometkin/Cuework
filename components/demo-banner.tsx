@@ -11,7 +11,7 @@ export function DemoBanner() {
   const router = useRouter();
   const [pending, start] = React.useTransition();
   return (
-    <div className="no-print border-b border-cue/30 bg-cue-soft px-4 py-2 text-[13px] text-cue-700 sm:px-6 lg:px-10">
+    <div className="no-print border-b border-cue/30 bg-cue-soft px-4 py-2 text-[14.56px] text-cue-700 sm:px-6 lg:px-10">
       <div className="mx-auto flex max-w-[1240px] flex-wrap items-center gap-x-3 gap-y-1">
         <FlaskConical className="size-4 shrink-0" aria-hidden />
         <p className="flex-1 leading-snug">

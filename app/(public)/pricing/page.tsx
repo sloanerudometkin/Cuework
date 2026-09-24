@@ -19,7 +19,7 @@ export default function PricingPage() {
   return (
     <div className="animate-rise">
       <section className="mx-auto max-w-6xl px-5 pb-6 pt-16 text-center sm:px-8 sm:pt-20">
-        <p className="text-[11px] font-semibold uppercase tracking-[0.1em] text-cue-700">Pricing</p>
+        <p className="text-[12.32px] font-semibold uppercase tracking-[0.1em] text-cue-700">Pricing</p>
         <h1 className="mx-auto mt-3 max-w-3xl text-4xl leading-tight sm:text-5xl">Priced for the team you have, not the department you don&apos;t.</h1>
         <p className="mx-auto mt-5 max-w-2xl text-lg text-soft">A two-person team should get the strategic clarity of a much larger SEO, AEO and paid-media group. Pick the plan that matches how many brands you run.</p>
       </section>

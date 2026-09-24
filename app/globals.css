@@ -67,13 +67,14 @@
 html {
   -webkit-text-size-adjust: 100%;
   scroll-behavior: smooth;
+  font-size: 112%;
 }
 
 body {
   background: var(--color-paper);
   color: var(--color-ink);
   font-family: var(--font-sans);
-  font-size: 15px;
+  font-size: 16.8px;
   line-height: 1.55;
   -webkit-font-smoothing: antialiased;
   text-rendering: optimizeLegibility;
@@ -117,7 +118,7 @@ p { text-wrap: pretty; }
 }
 
 @media print {
-  body { background: #fff; font-size: 12px; }
+  body { background: #fff; font-size: 13.44px; }
   .no-print { display: none !important; }
   .print-only { display: block !important; }
   .print-plain { box-shadow: none !important; border: none !important; padding: 0 !important; }

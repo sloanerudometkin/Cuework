@@ -37,7 +37,7 @@ export function ComparisonChart({ metric, current, previous, name }: { metric: M
         {ticks.map((t, i) => (
           <g key={i}>
             <line x1={pad.l} x2={W - pad.r} y1={y(t)} y2={y(t)} stroke="var(--color-line)" strokeWidth="1" />
-            <text x={pad.l - 8} y={y(t) + 4} textAnchor="end" fontSize="10.5" fill="var(--color-muted)" className="tabular">
+            <text x={pad.l - 8} y={y(t) + 4} textAnchor="end" fontSize="11.76" fill="var(--color-muted)" className="tabular">
               {formatMetricValue(metric, t, { compact: true })}
             </text>
           </g>
@@ -45,8 +45,8 @@ export function ComparisonChart({ metric, current, previous, name }: { metric: M
         <path d={path(previous)} fill="none" stroke="var(--color-line-strong)" strokeWidth="2" strokeDasharray="4 4" strokeLinecap="round" />
         <path d={path(current)} fill="none" stroke="var(--color-ink)" strokeWidth="2.25" strokeLinecap="round" strokeLinejoin="round" />
         {last.value != null ? <circle cx={x(n - 1)} cy={y(last.value)} r="4" fill="var(--color-cue)" stroke="white" strokeWidth="1.5" /> : null}
-        <text x={x(0)} y={H - 6} fontSize="10.5" fill="var(--color-muted)" textAnchor="start">{formatMonth(first.period, { short: true })}</text>
-        <text x={x(n - 1)} y={H - 6} fontSize="10.5" fill="var(--color-muted)" textAnchor="end">{formatMonth(last.period, { short: true })}</text>
+        <text x={x(0)} y={H - 6} fontSize="11.76" fill="var(--color-muted)" textAnchor="start">{formatMonth(first.period, { short: true })}</text>
+        <text x={x(n - 1)} y={H - 6} fontSize="11.76" fill="var(--color-muted)" textAnchor="end">{formatMonth(last.period, { short: true })}</text>
       </svg>
       <figcaption className="mt-1 flex items-center gap-4 text-xs text-muted">
         <span className="inline-flex items-center gap-1.5"><span className="h-0.5 w-5 bg-ink" aria-hidden />This year</span>
