@@ -9,6 +9,8 @@
 ![Tests](https://img.shields.io/badge/tests-105_passing-2EA44F?logo=vitest&logoColor=white)
 ![Status](https://img.shields.io/badge/status-MVP-D9691D)
 
+![Cuework Command Center](docs/command-center.jpg)
+
 ## Contents
 
 - [Overview](#overview)
