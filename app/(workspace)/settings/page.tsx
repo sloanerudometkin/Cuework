@@ -1,4 +1,4 @@
-import { CreditCard, Link2Off } from "lucide-react";
+import { CreditCard, Link2, Link2Off } from "lucide-react";
 import type { Metadata } from "next";
 import { SourceBadge } from "@/components/domain/badges";
 import { PageHeader } from "@/components/domain/page-header";
@@ -14,9 +14,9 @@ import { hoursLabel } from "@/lib/utils";
 export const metadata: Metadata = { title: "Settings" };
 
 const CONNECTORS = [
-  { name: "Google Analytics 4", detail: "Sessions, conversions and landing pages" },
-  { name: "Google Search Console", detail: "Queries, impressions, clicks and positions" },
-  { name: "Google Ads", detail: "Campaigns, keywords, spend and conversions" },
+  { name: "Google Analytics 4", detail: "Sessions, conversions and landing pages", demoAccount: "3 properties · Harborline Group" },
+  { name: "Google Search Console", detail: "Queries, impressions, clicks and positions", demoAccount: "3 verified domains" },
+  { name: "Google Ads", detail: "Campaigns, keywords, spend and conversions", demoAccount: "Harborline Group MCC · 2 accounts" },
 ];
 
 function Section({ id, title, description, action, children }: { id: string; title: string; description?: string; action?: React.ReactNode; children: React.ReactNode }) {
@@ -121,15 +121,28 @@ export default async function SettingsPage() {
           <div className="mt-6 border-t border-line pt-5">
             <Eyebrow>Live connections</Eyebrow>
             <ul className="mt-3 grid gap-3 md:grid-cols-3">
-              {CONNECTORS.map((c) => (
-                <li key={c.name} className="rounded-xl border border-dashed border-line-strong p-4">
-                  <div className="flex items-start justify-between gap-2"><p className="text-sm font-medium">{c.name}</p><Badge tone="outline"><Link2Off className="size-3" aria-hidden />Not connected</Badge></div>
-                  <p className="mt-1.5 text-xs text-muted">{c.detail}</p>
-                  <p className="mt-3 text-xs font-medium text-soft">Coming soon</p>
-                </li>
-              ))}
+              {CONNECTORS.map((c) =>
+                ws.org.isDemo ? (
+                  <li key={c.name} className="rounded-xl border border-line p-4">
+                    <div className="flex flex-wrap items-start justify-between gap-2"><p className="text-sm font-medium">{c.name}</p><Badge tone="good"><Link2 className="size-3" aria-hidden />Connected</Badge></div>
+                    <p className="mt-1.5 text-xs text-muted">{c.detail}</p>
+                    <p className="mt-3 text-xs font-medium text-soft">{c.demoAccount}</p>
+                    <p className="mt-0.5 text-xs text-muted">Synced daily · last sync today, 6:00 AM</p>
+                  </li>
+                ) : (
+                  <li key={c.name} className="rounded-xl border border-dashed border-line-strong p-4">
+                    <div className="flex items-start justify-between gap-2"><p className="text-sm font-medium">{c.name}</p><Badge tone="outline"><Link2Off className="size-3" aria-hidden />Not connected</Badge></div>
+                    <p className="mt-1.5 text-xs text-muted">{c.detail}</p>
+                    <p className="mt-3 text-xs font-medium text-soft">Coming soon</p>
+                  </li>
+                ),
+              )}
             </ul>
-            <p className="mt-3 text-xs text-muted">Direct connections aren&apos;t available in this version. The import pipeline is built so a connector can write into the same tables — nothing here is simulated as live.</p>
+            {ws.org.isDemo ? (
+              <p className="mt-3 text-xs text-muted">Demo workspace: these connections are simulated to show what a connected workspace looks like. No data is fetched from Google.</p>
+            ) : (
+              <p className="mt-3 text-xs text-muted">Direct connections aren&apos;t available in this version. The import pipeline is built so a connector can write into the same tables — nothing here is simulated as live.</p>
+            )}
           </div>
         </Section>
 
