@@ -183,7 +183,7 @@ export async function getPortfolio(db: Db, orgId: string, now = new Date()) {
     .filter((o) => o.verdict === "improved")
     .slice(0, 4);
 
-  const attention = buildAttention({ plan, open, blocked, anomalies, ws });
+  const attention = buildAttention({ plan, open, blocked, active: [...blocked, ...overrun], anomalies, ws });
 
   return { ws, period, plan, properties, anomalies, open, atRisk, wins, attention, outcomesPending: outcomesAll.filter((o) => o.verdict === "pending").length };
 }
@@ -192,6 +192,8 @@ export function buildAttention(input: {
   plan: WeekPlanView;
   open: { id: string; title: string; priorityScore: number }[];
   blocked: { id: string; title: string; blockedReason: string | null; needsLeadership: boolean }[];
+  /** Blocked or in-progress work; an anomaly someone is already investigating isn't raised again. */
+  active: { title: string }[];
   anomalies: { propertyName: string; severity: string; sentiment: string; target: MetricTarget; deviation: number }[];
   ws: Workspace;
 }): AttentionItem[] {
@@ -208,7 +210,7 @@ export function buildAttention(input: {
     });
   }
   const worst = input.anomalies.find((a) => a.severity === "high" && a.sentiment === "bad");
-  if (worst && !input.blocked.some((b) => b.title.toLowerCase().includes("tracking") || b.title.toLowerCase().includes("conversion"))) {
+  if (worst && !input.active.some((w) => w.title.toLowerCase().includes("tracking") || w.title.toLowerCase().includes("conversion"))) {
     items.push({
       id: "anomaly",
       tone: "urgent",

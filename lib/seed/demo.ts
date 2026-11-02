@@ -386,7 +386,7 @@ export async function seedDemoWorkspace(db: Db, now = new Date()): Promise<SeedR
   });
   const yoy = await acceptAndPlan(`yoy_decline:${propertyIds.authority}`, maya.id);
   const aeo = await acceptAndPlan(`aeo_gap:${propertyIds.airport}`, kathleen.id);
-  await acceptAndPlan(`budget_imbalance:${propertyIds.ferry}`, maya.id); // backlog only, not yet scheduled
+  const budget = await acceptAndPlan(`budget_imbalance:${propertyIds.ferry}`, maya.id);
 
   await decideRecommendation(db, {
     orgId, actor, now, recommendationId: rec(`low_ctr:${propertyIds.airport}:harborline airport flight status`).id,
@@ -414,6 +414,7 @@ export async function seedDemoWorkspace(db: Db, now = new Date()): Promise<SeedR
       { id: paidWaste.workItemId!, assigneeId: maya.id },
       { id: yoy.workItemId!, assigneeId: maya.id },
       { id: aeo.workItemId!, assigneeId: kathleen.id },
+      { id: budget.workItemId!, assigneeId: maya.id },
     ],
   });
 
@@ -421,12 +422,14 @@ export async function seedDemoWorkspace(db: Db, now = new Date()): Promise<SeedR
   await transitionWork(db, { orgId, id: ferryCtr.workItemId!, action: { type: "log_hours", hours: 2.5 }, now });
   await transitionWork(db, { orgId, id: tracking.workItemId!, action: { type: "start" }, now });
   await transitionWork(db, { orgId, id: tracking.workItemId!, action: { type: "log_hours", hours: 1.5 }, now });
+  await transitionWork(db, { orgId, id: budget.workItemId!, action: { type: "start" }, now });
+  await transitionWork(db, { orgId, id: budget.workItemId!, action: { type: "log_hours", hours: 1 }, now });
   await transitionWork(db, {
-    orgId, id: tracking.workItemId!, now,
+    orgId, id: budget.workItemId!, now,
     action: {
       type: "block",
       needsLeadership: true,
-      reason: "The parking-reservation tag lives in a container only the web team can publish. Waiting on their release slot — needs leadership to prioritise the IT ticket.",
+      reason: "The campaign split is locked in the approved quarterly media plan. Reallocating it needs leadership sign-off before finance will amend the PO — every week of delay keeps funding the weaker campaign first.",
     },
   });
 

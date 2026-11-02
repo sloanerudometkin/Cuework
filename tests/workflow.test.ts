@@ -249,7 +249,7 @@ describe("work board → outcomes → leadership brief", () => {
 
   it("completing work records a baseline outcome tied to the original recommendation and metric", async () => {
     const work = await listWork(db, orgId);
-    const running = work.find((w) => w.status === "in_progress")!;
+    const running = work.find((w) => w.status === "in_progress" && w.title.includes("ferry schedule"))!;
     const done = await transitionWork(db, { orgId, id: running.id, action: { type: "complete", actualHours: 5.5 }, now: NOW });
     expect(done.status).toBe("complete");
     expect(done.hoursSpent).toBe(5.5);
@@ -324,9 +324,9 @@ describe("work board → outcomes → leadership brief", () => {
     expect(brief.completed.some((c) => c.title.includes("ferry schedule"))).toBe(true); // the item we just completed
     expect(brief.completed.some((c) => c.outcome?.evidence === "experiment")).toBe(true); // seeded tested win, if inside the window
     expect(brief.blocked).toHaveLength(1);
-    expect(brief.leadershipAsks[0].title).toMatch(/Investigate a 7\d% conversion drop/);
-    expect(brief.leadershipAsks[0].property).toBe("Harborline Regional Airport");
-    expect(brief.headline).toBe("August 2026: Harborline Regional Airport needs leadership attention");
+    expect(brief.leadershipAsks[0].title).toMatch(/^Unblock: Shift ≈.+ to budget-limited/);
+    expect(brief.leadershipAsks[0].property).toBe("Harborline Ferries");
+    expect(brief.headline).toBe("August 2026: Harborline Ferries needs leadership attention");
     // Routine work with no metric is never described as "awaiting data".
     expect(brief.completed.some((c) => !c.hasMetric)).toBe(true);
     expect(brief.summary[1]).toMatch(/routine \(no metric attached\)/);
@@ -339,10 +339,10 @@ describe("work board → outcomes → leadership brief", () => {
     expect(brief.properties).toHaveLength(3);
     expect(brief.caveats.join(" ")).toMatch(/not proven to be caused/);
 
-    const md = briefToMarkdown(brief, "Please prioritise the IT ticket.");
+    const md = briefToMarkdown(brief, "Please approve the budget shift.");
     expect(md).toContain("## What the team completed");
     expect(md).toContain("## Where leadership attention is needed");
-    expect(md).toContain("> Please prioritise the IT ticket.");
+    expect(md).toContain("> Please approve the budget shift.");
     expect(md).toMatch(/Correlated|Corroborated|Proven/);
 
     const saved = await saveBrief(db, { orgId, actor, note: "n", now: NOW });
