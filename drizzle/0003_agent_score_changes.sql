@@ -1,0 +1,1 @@
+ALTER TABLE "recommendations" ADD COLUMN "agent_score_changes" jsonb;

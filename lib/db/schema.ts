@@ -20,6 +20,13 @@ export interface AgentCheck {
   check: string;
   thought: string;
 }
+
+/** A score the AI agent changed, kept so the UI can say so (it may only lower confidence). */
+export interface AgentScoreChange {
+  score: "confidence";
+  from: number;
+  to: number;
+}
 import type { BriefContent } from "@/lib/domain/reporting";
 
 /**
@@ -210,6 +217,8 @@ export const recommendations = pgTable(
     agentNote: text("agent_note"),
     /** What the agent checked while investigating, in order. */
     agentChecks: jsonb("agent_checks").$type<AgentCheck[]>(),
+    /** Scores the agent changed, with before/after values. */
+    agentScoreChanges: jsonb("agent_score_changes").$type<AgentScoreChange[]>(),
     status: recStatus("status").notNull().default("new"),
     deferUntil: date("defer_until", { mode: "string" }),
     /** Reporting month the evidence was computed for. */

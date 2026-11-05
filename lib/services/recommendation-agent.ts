@@ -1,7 +1,7 @@
 import { and, desc, eq, inArray, isNull } from "drizzle-orm";
 import { z } from "zod/v4";
 import type { Db } from "@/lib/db/connect";
-import { properties, recommendationEvidence, recommendations, type AgentCheck } from "@/lib/db/schema";
+import { properties, recommendationEvidence, recommendations, type AgentCheck, type AgentScoreChange } from "@/lib/db/schema";
 import { addMonths, formatMonth, lastYear } from "@/lib/domain/dates";
 import { evaluateTarget, filterRows, formatMetricValue, pctChange, propertyPeriods, sumRows, metricFromTotals } from "@/lib/domain/metrics";
 import { scorePriority } from "@/lib/domain/prioritization";
@@ -15,7 +15,7 @@ import { loadSnapshots } from "./workspace";
  * Cuework's rules engine is the lead generator: every card it produces is a lead. For each
  * open lead, a small agent running on a free local model decides which checks to run
  * against the data (up to MAX_CHECKS), then returns a verdict:
- *   keep  — real and worth the team's time: rewritten in plain language, scores nudged ±1
+ *   keep  — real and worth the team's time: rewritten in plain language
  *   drop  — a false alarm (seasonal dip, tracking problem, too small): set aside with a reason
  *   merge — the same issue as another open lead: set aside, pointing at that lead
  *
@@ -23,6 +23,11 @@ import { loadSnapshots } from "./workspace";
  * shape, which is what keeps a 4B model reliable on a laptop. The code runs the checks;
  * the model only chooses them and judges the results. Anything unusable (bad JSON, an
  * invented number, a timeout) leaves that lead exactly as the rules engine wrote it.
+ *
+ * The agent can't raise a lead's priority: impact and urgency stay as the rules scored them,
+ * and the only score it may touch is confidence, and only downwards, when a check undercuts
+ * the lead. Its real levers are keep / drop / merge. (In live runs a 4B model raised scores on
+ * muddled reasoning, so it isn't trusted with that.)
  */
 
 export const MAX_CHECKS = 3;
@@ -154,14 +159,13 @@ export interface Verdict {
   mergeWith: string | null;
   reason: string;
   text: CardText | null;
-  impactChange: number;
-  urgencyChange: number;
-  confidenceChange: number;
+  /** 0, or -1 to lower confidence by 10 points because a check undercut the lead. */
+  confidenceChange: 0 | -1;
   checks: AgentCheck[];
 }
 
 const STEP = z.object({
-  thought: z.string().max(300).describe("One short sentence: what you want to find out next, or why you're ready to decide."),
+  thought: z.string().max(160).describe("One short line: what you will check and why, or why you can decide now."),
   action: z.enum([...(Object.keys(CHECKS) as CheckName[]), "decide"]),
 });
 
@@ -169,9 +173,7 @@ const DECISION = z.object({
   verdict: z.enum(["keep", "drop", "merge"]),
   merge_with: z.string().max(10).describe('Code of the other lead (e.g. "L2") when merging, otherwise ""'),
   reason: z.string().min(10).max(400).describe("One or two sentences citing what you found."),
-  impact_change: z.number().int().min(-1).max(1),
-  urgency_change: z.number().int().min(-1).max(1),
-  confidence_change: z.number().int().min(-1).max(1),
+  lower_confidence: z.boolean().describe("true only if a check contradicts or weakens the lead"),
   title: z.string().max(140),
   rationale: z.string().max(900),
   expected_outcome: z.string().max(400),
@@ -187,7 +189,9 @@ ${Object.entries(CHECKS)
   .join("\n")}
 - decide: you know enough to give a verdict.
 
-Each turn, reply with JSON: {"thought": "...", "action": "<check or decide>"}. Run at most ${MAX_CHECKS} checks; one or two is often enough. Do not repeat a check.
+Each turn, reply with JSON: {"thought": "...", "action": "<check or decide>"}. The thought is one short line saying what you will check and why, not a summary of results.
+
+Pick only checks that can change your verdict for this lead. tracking_check is only relevant when the lead is about conversions. Decide as soon as one check settles the question; run at most ${MAX_CHECKS}, and never repeat one.
 
 Common false alarms: a dip that also happened a year earlier (seasonality), conversions collapsing while traffic holds (broken tracking: the real issue is tracking), and volumes too small to matter.`;
 
@@ -195,8 +199,9 @@ const DECIDE_PROMPT = `Now give your verdict as JSON.
 - verdict "keep": the lead is real and worth doing. Rewrite title, rationale, expected_outcome, next_step and why_now in plain, specific language (title starts with a verb and names the page, query, campaign or keyword).
 - verdict "drop": it's a false alarm or not worth the team's time. Leave the text fields "".
 - verdict "merge": it's the same issue as another listed lead; put its code in merge_with. Leave the text fields "".
-- Only use numbers that appear in the lead or in your check results. Never invent figures.
-- impact_change, urgency_change and confidence_change are -1, 0 or 1. Use 0 unless a check clearly justifies a change, and say why in reason.`;
+- reason: say what your checks showed about THIS lead, in one or two sentences. Don't mention unrelated metrics.
+- Only use numbers that appear in the lead or in your check results. Never invent or calculate new figures.
+- lower_confidence: true only if a check contradicts or weakens the lead (for example the dip also happened last year). Otherwise false.`;
 
 function leadMessage(lead: Lead, property: { name: string; goal: string; conversionLabel: string }, others: Lead[]) {
   return [
@@ -262,7 +267,8 @@ export async function investigateLead(
   }
 
   // Guard against invented numbers: everything significant must come from the lead or a check result.
-  const allowed = significantNumbers(seen);
+  // The agent's own instructions count as allowed too (e.g. the "13" in "13 months").
+  const allowed = significantNumbers(`${SYSTEM}\n${DECIDE_PROMPT}\n${seen}`);
   const said = [d.reason, ...(d.verdict === "keep" ? Object.values(text) : [])].join(" ");
   const invented = [...significantNumbers(said)].filter((n) => !allowed.has(n));
   if (invented.length) throw new LocalModelError(`Introduced numbers not in the data: ${invented.join(", ")}`);
@@ -272,9 +278,7 @@ export async function investigateLead(
     mergeWith,
     reason: d.reason.trim(),
     text: d.verdict === "keep" ? text : null,
-    impactChange: d.impact_change,
-    urgencyChange: d.urgency_change,
-    confidenceChange: d.confidence_change,
+    confidenceChange: d.lower_confidence ? -1 : 0,
     checks,
   };
 }
@@ -370,22 +374,21 @@ export async function investigatePending(db: Db, orgId: string, opts: { config?:
           continue;
         }
 
-        const impact = clamp(rec.impact + v.impactChange, 1, 5);
-        const urgency = clamp(rec.urgency + v.urgencyChange, 1, 5);
-        const confidence = clamp(Math.round((rec.confidence + v.confidenceChange * 0.1) * 100) / 100, 0.1, 0.95);
+        const confidence = v.confidenceChange < 0 ? clamp(Math.round((rec.confidence - 0.1) * 100) / 100, 0.1, 0.95) : rec.confidence;
         const mergedInto = v.mergeWith ? byCode.get(v.mergeWith) : undefined;
         const note = mergedInto ? `${v.reason} (Same issue as “${mergedInto.title}”.)` : v.reason;
+        const scoreChanges: AgentScoreChange[] =
+          confidence !== rec.confidence ? [{ score: "confidence", from: rec.confidence, to: confidence }] : [];
         await db
           .update(recommendations)
           .set({
             ...(v.text ? { ...v.text, aiWritten: true } : {}),
-            impact,
-            urgency,
             confidence,
-            priorityScore: scorePriority({ impact, urgency, strategic: rec.strategic, confidence, effort: rec.effort }),
+            priorityScore: scorePriority({ impact: rec.impact, urgency: rec.urgency, strategic: rec.strategic, confidence, effort: rec.effort }),
             agentVerdict: v.verdict,
             agentNote: note,
             agentChecks: v.checks,
+            agentScoreChanges: scoreChanges,
           })
           // Only apply if a refresh hasn't replaced the lead meanwhile and it's still open.
           .where(
