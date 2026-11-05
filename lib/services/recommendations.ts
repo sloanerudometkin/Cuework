@@ -1,4 +1,4 @@
-import { and, desc, eq, inArray, lte, sql } from "drizzle-orm";
+import { and, desc, eq, inArray, isNull, lte, notInArray, or, sql } from "drizzle-orm";
 import type { Db } from "@/lib/db/connect";
 import {
   properties,
@@ -10,7 +10,8 @@ import {
 } from "@/lib/db/schema";
 import { capRecommendations } from "@/lib/domain/entitlements";
 import { generateRecommendations } from "@/lib/domain/recommendations";
-import { comparePriority } from "@/lib/domain/prioritization";
+import { comparePriority, scorePriority } from "@/lib/domain/prioritization";
+import { sourceHash } from "./local-model";
 import { toISODate } from "@/lib/domain/dates";
 import { loadWorkspace, ServiceError, type Actor } from "./workspace";
 
@@ -25,6 +26,8 @@ export interface RefreshResult {
   created: number;
   updated: number;
   resurfaced: number;
+  /** Open leads the local AI agent hasn't investigated yet. */
+  awaitingAgent: number;
 }
 
 /**
@@ -33,10 +36,13 @@ export interface RefreshResult {
  *  - open ones (new/refining) get fresh numbers and evidence
  *  - dismissed ones stay dismissed (institutional memory), converted ones are left alone
  *  - deferred ones resurface when their defer date has passed
+ * The local AI agent's verdict, wording and score changes (see recommendation-agent.ts) are
+ * kept as long as the rules engine's underlying text and evidence haven't changed; otherwise
+ * the lead reverts to the rules version until the agent investigates it again.
  */
 export async function refreshRecommendations(db: Db, orgId: string, now = new Date()): Promise<RefreshResult> {
   const ws = await loadWorkspace(db, orgId);
-  const result: RefreshResult = { period: ws.period, created: 0, updated: 0, resurfaced: 0 };
+  const result: RefreshResult = { period: ws.period, created: 0, updated: 0, resurfaced: 0, awaitingAgent: 0 };
   if (!ws.period) return result;
 
   const { recommendations: drafts } = generateRecommendations({
@@ -51,24 +57,38 @@ export async function refreshRecommendations(db: Db, orgId: string, now = new Da
   await db.transaction(async (tx) => {
     for (const d of drafts) {
       const found = byFingerprint.get(d.fingerprint);
-      const values = {
-        propertyId: d.propertyId,
-        ruleKey: d.ruleKey,
-        category: d.category,
+      const hash = sourceHash(d, d.evidence);
+      // Same lead as before and the agent has already investigated it: keep its wording and judgement.
+      const keepAgentWork = found?.agentVerdict != null && found.sourceHash === hash;
+      const rulesVersion = {
         title: d.title,
         rationale: d.rationale,
         expectedOutcome: d.expectedOutcome,
         nextStep: d.nextStep,
         whyNow: d.whyNow,
-        target: d.target,
         impact: d.impact,
-        effort: d.effort,
         urgency: d.urgency,
-        strategic: d.strategic,
         confidence: d.confidence,
+        priorityScore: d.priorityScore,
+        aiWritten: false,
+        sourceHash: hash,
+        agentVerdict: null,
+        agentNote: null,
+        agentChecks: null,
+      };
+      const judged = keepAgentWork
+        ? { priorityScore: scorePriority({ impact: found.impact, urgency: found.urgency, strategic: d.strategic, confidence: found.confidence, effort: d.effort }) }
+        : rulesVersion;
+      const values = {
+        propertyId: d.propertyId,
+        ruleKey: d.ruleKey,
+        category: d.category,
+        ...judged,
+        target: d.target,
+        effort: d.effort,
+        strategic: d.strategic,
         estimatedHours: d.estimatedHours,
         suggestedOwnerRole: d.suggestedOwnerRole,
-        priorityScore: d.priorityScore,
         basedOnPeriod: d.period,
         updatedAt: now,
       };
@@ -91,7 +111,7 @@ export async function refreshRecommendations(db: Db, orgId: string, now = new Da
       };
 
       if (!found) {
-        const [row] = await tx.insert(recommendations).values({ orgId, fingerprint: d.fingerprint, ...values }).returning();
+        const [row] = await tx.insert(recommendations).values({ orgId, fingerprint: d.fingerprint, ...values, ...rulesVersion }).returning();
         await attachEvidence(row.id);
         result.created++;
       } else if (found.status === "new" || found.status === "refining") {
@@ -105,6 +125,11 @@ export async function refreshRecommendations(db: Db, orgId: string, now = new Da
       }
     }
   });
+  const [{ n }] = await db
+    .select({ n: sql<number>`count(*)::int` })
+    .from(recommendations)
+    .where(and(eq(recommendations.orgId, orgId), isNull(recommendations.agentVerdict), inArray(recommendations.status, ["new", "refining"])));
+  result.awaitingAgent = n;
   return result;
 }
 
@@ -138,8 +163,13 @@ async function hydrate(db: Db, rows: RecommendationRow[]): Promise<Recommendatio
   }));
 }
 
+/** Leads the AI agent judged a false alarm or a duplicate. Kept visible on their own tab, never deleted. */
+export const SET_ASIDE = ["drop", "merge"] as const;
+const isSetAside = (r: { agentVerdict: string | null }) => (SET_ASIDE as readonly string[]).includes(r.agentVerdict ?? "");
+
 export interface InboxData {
   open: RecommendationView[];
+  setAside: RecommendationView[];
   hiddenByPlan: number;
   deferred: RecommendationView[];
   dismissed: RecommendationView[];
@@ -153,9 +183,10 @@ export async function getInbox(db: Db, orgId: string): Promise<InboxData> {
   const views = await hydrate(db, rows);
   const sorted = [...views].sort(comparePriority);
   const isOpen = (r: RecommendationView) => (OPEN_STATUSES as readonly string[]).includes(r.status);
-  const { visible, hidden } = capRecommendations(sorted.filter(isOpen), ws.planKey);
+  const { visible, hidden } = capRecommendations(sorted.filter((r) => isOpen(r) && !isSetAside(r)), ws.planKey);
   return {
     open: visible,
+    setAside: sorted.filter((r) => isOpen(r) && isSetAside(r)),
     hiddenByPlan: hidden,
     deferred: sorted.filter((r) => r.status === "deferred"),
     dismissed: sorted.filter((r) => r.status === "dismissed"),
@@ -305,7 +336,13 @@ export async function countOpen(db: Db, orgId: string): Promise<number> {
   const [row] = await db
     .select({ n: sql<number>`count(*)::int` })
     .from(recommendations)
-    .where(and(eq(recommendations.orgId, orgId), inArray(recommendations.status, ["new", "refining"])));
+    .where(
+      and(
+        eq(recommendations.orgId, orgId),
+        inArray(recommendations.status, ["new", "refining"]),
+        or(isNull(recommendations.agentVerdict), notInArray(recommendations.agentVerdict, [...SET_ASIDE])),
+      ),
+    );
   return row?.n ?? 0;
 }
 

@@ -15,6 +15,11 @@ import {
   uuid,
 } from "drizzle-orm/pg-core";
 import type { MetricTarget, SnapshotAttrs } from "@/lib/domain/types";
+
+export interface AgentCheck {
+  check: string;
+  thought: string;
+}
 import type { BriefContent } from "@/lib/domain/reporting";
 
 /**
@@ -195,6 +200,16 @@ export const recommendations = pgTable(
     estimatedHours: doublePrecision("estimated_hours").notNull(),
     suggestedOwnerRole: text("suggested_owner_role").notNull(),
     priorityScore: doublePrecision("priority_score").notNull(),
+    /** True once the local AI model has rewritten the rules engine's wording. */
+    aiWritten: boolean("ai_written").notNull().default(false),
+    /** Hash of the rules engine's text + evidence; the agent's work is kept only while this is unchanged. */
+    sourceHash: text("source_hash"),
+    /** The local AI agent's verdict on this lead: keep | drop | merge. Null = not investigated yet. */
+    agentVerdict: text("agent_verdict"),
+    /** The agent's one-line reason for its verdict (and any score changes). */
+    agentNote: text("agent_note"),
+    /** What the agent checked while investigating, in order. */
+    agentChecks: jsonb("agent_checks").$type<AgentCheck[]>(),
     status: recStatus("status").notNull().default("new"),
     deferUntil: date("defer_until", { mode: "string" }),
     /** Reporting month the evidence was computed for. */

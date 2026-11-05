@@ -8,6 +8,20 @@
       "when": 1789954131976,
       "tag": "0000_strong_hobgoblin",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1793829104666,
+      "tag": "0001_ai_written_recommendations",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1793888292592,
+      "tag": "0002_agent_verdicts",
+      "breakpoints": true
     }
   ]
 }

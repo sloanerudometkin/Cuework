@@ -1,7 +1,8 @@
 import { ArrowLeft, CircleCheck, Inbox, Lock } from "lucide-react";
 import type { Metadata } from "next";
 import Link from "next/link";
-import { CategoryBadge, SourceBadge } from "@/components/domain/badges";
+import { AgentBadge, CategoryBadge, SourceBadge } from "@/components/domain/badges";
+import { AgentProgress } from "@/components/agent-progress";
 import { EmptyState } from "@/components/domain/empty-state";
 import { PageHeader } from "@/components/domain/page-header";
 import { LevelDots, PriorityChip } from "@/components/domain/priority";
@@ -16,6 +17,7 @@ import { getPlan } from "@/lib/domain/entitlements";
 import { explainPriority } from "@/lib/domain/prioritization";
 import { getWeekPlan } from "@/lib/services/planning";
 import { getDecisionLog, getInbox, type RecommendationView } from "@/lib/services/recommendations";
+import { agentStatus, type CheckName } from "@/lib/services/recommendation-agent";
 import { loadWorkspace, propertySourceStatus } from "@/lib/services/workspace";
 import { cn, hoursLabel } from "@/lib/utils";
 
@@ -26,6 +28,7 @@ const TABS = [
   { id: "deferred", label: "Deferred" },
   { id: "dismissed", label: "Dismissed" },
   { id: "converted", label: "In work" },
+  { id: "aside", label: "Set aside by AI" },
   { id: "log", label: "Decision log" },
 ] as const;
 type TabId = (typeof TABS)[number]["id"];
@@ -39,6 +42,12 @@ const STATUS_LABEL: Record<string, { label: string; tone: "neutral" | "cue" | "g
   dismissed: { label: "Dismissed", tone: "neutral" },
 };
 
+const CHECK_LABEL: Record<CheckName, string> = {
+  trend: "Checked the 13-month trend",
+  compare_last_year: "Compared with last year",
+  breakdown: "Broke down the rows behind it",
+  tracking_check: "Checked conversion tracking",
+};
 const DECISION_LABEL: Record<string, string> = { accept: "Accepted", convert: "Converted to work", defer: "Deferred", dismiss: "Dismissed", refine: "Refinement requested" };
 
 export default async function RecommendationsPage({ searchParams }: { searchParams: Promise<{ tab?: string; r?: string }> }) {
@@ -47,14 +56,14 @@ export default async function RecommendationsPage({ searchParams }: { searchPara
   const now = new Date();
   const [ws, inbox, plan] = await Promise.all([loadWorkspace(db, orgId), getInbox(db, orgId), getWeekPlan(db, orgId, weekStart(now))]);
   const tab: TabId = TABS.some((t) => t.id === sp.tab) ? (sp.tab as TabId) : "open";
-  const lists: Record<Exclude<TabId, "log">, RecommendationView[]> = { open: inbox.open, deferred: inbox.deferred, dismissed: inbox.dismissed, converted: inbox.converted };
+  const lists: Record<Exclude<TabId, "log">, RecommendationView[]> = { open: inbox.open, deferred: inbox.deferred, dismissed: inbox.dismissed, converted: inbox.converted, aside: inbox.setAside };
   const list = tab === "log" ? [] : lists[tab];
   // A stale ?r= (e.g. the item was just decided and left this list) falls through to the top item.
   const requested = tab === "log" ? null : (list.find((r) => r.id === sp.r) ?? null);
   const selected = requested ?? (tab === "log" ? null : (list[0] ?? null));
   const showDetailOnMobile = Boolean(requested);
   const log = tab === "log" ? await getDecisionLog(db, orgId) : [];
-  const counts = { open: inbox.open.length, deferred: inbox.deferred.length, dismissed: inbox.dismissed.length, converted: inbox.converted.length, log: 0 };
+  const counts = { open: inbox.open.length, deferred: inbox.deferred.length, dismissed: inbox.dismissed.length, converted: inbox.converted.length, aside: inbox.setAside.length, log: 0 };
   const plan_ = getPlan(ws.planKey);
   const memberByRole = (role: string) => ws.team.find((t) => t.roleKey === role) ?? ws.team[0];
 
@@ -66,6 +75,8 @@ export default async function RecommendationsPage({ searchParams }: { searchPara
         description="Every recommendation shows its evidence, why it matters now, and whether your team can realistically take it on."
         actions={<RefreshAnalysis />}
       />
+
+      <AgentProgress status={agentStatus(orgId)} />
 
       <nav aria-label="Recommendation views" className="thin-scroll -mx-4 mb-6 flex gap-1 overflow-x-auto px-4 sm:mx-0 sm:px-0">
         {TABS.map((t) => (
@@ -124,12 +135,14 @@ export default async function RecommendationsPage({ searchParams }: { searchPara
       ) : list.length === 0 ? (
         <EmptyState
           icon={tab === "open" ? CircleCheck : Inbox}
-          title={tab === "open" ? "You're caught up" : `Nothing ${tab === "converted" ? "in work" : tab} yet`}
+          title={tab === "open" ? "You're caught up" : tab === "aside" ? "Nothing set aside" : `Nothing ${tab === "converted" ? "in work" : tab} yet`}
           action={tab === "open" ? <RefreshAnalysis /> : undefined}
         >
           {tab === "open"
             ? "There are no recommendations waiting for a decision. Import newer data or re-run the analysis to check for new opportunities."
-            : "Items appear here as you make decisions in the inbox."}
+            : tab === "aside"
+              ? "When the AI agent investigates a lead and finds it's a false alarm or a duplicate, it lands here with its reasoning, so nothing is hidden for good."
+              : "Items appear here as you make decisions in the inbox."}
         </EmptyState>
       ) : (
         <div className="grid gap-6 lg:grid-cols-[minmax(0,380px)_minmax(0,1fr)]">
@@ -153,6 +166,7 @@ export default async function RecommendationsPage({ searchParams }: { searchPara
                         <span className="line-clamp-2 text-sm font-medium leading-snug">{r.title}</span>
                         <span className="mt-2 flex flex-wrap items-center gap-1.5">
                           <CategoryBadge category={r.category} />
+                          <AgentBadge verdict={r.agentVerdict} />
                           {r.status === "refining" ? <Badge tone="info">Refining</Badge> : null}
                           {r.status === "accepted" ? <Badge tone="good">Accepted</Badge> : null}
                           <span className="text-xs text-muted">
@@ -246,6 +260,7 @@ function Detail({
           <Badge tone="outline">{rec.propertyName}</Badge>
           <Badge tone={status.tone}>{status.label}</Badge>
           <SourceBadge status={sourceStatus} />
+          <AgentBadge verdict={rec.agentVerdict} />
         </div>
         <h2 className="mt-3 text-xl leading-snug sm:text-[1.4rem]">{rec.title}</h2>
         <div className="mt-5">
@@ -298,6 +313,30 @@ function Detail({
             </p>
           </section>
         </div>
+
+        {rec.agentVerdict ? (
+          <section aria-labelledby="agent" className="rounded-xl border border-line bg-sunken px-4 py-4">
+            <Eyebrow id="agent">{rec.agentVerdict === "keep" ? "AI agent checked this" : "Why the AI agent set this aside"}</Eyebrow>
+            {rec.agentNote ? <p className="mt-1.5 leading-relaxed">{rec.agentNote}</p> : null}
+            {rec.agentChecks?.length ? (
+              <ol className="mt-3 space-y-1.5 text-sm text-soft">
+                {rec.agentChecks.map((c, i) => (
+                  <li key={i} className="flex gap-2">
+                    <span className="tabular text-muted">{i + 1}.</span>
+                    <span>
+                      <span className="font-medium text-ink">{CHECK_LABEL[c.check as CheckName] ?? c.check}</span>: {c.thought}
+                    </span>
+                  </li>
+                ))}
+              </ol>
+            ) : (
+              <p className="mt-2 text-sm text-muted">The evidence was clear enough that it decided without extra checks.</p>
+            )}
+            {rec.agentVerdict !== "keep" ? (
+              <p className="mt-3 text-xs text-muted">You can still accept it below if you disagree. The agent never dismisses anything for you.</p>
+            ) : null}
+          </section>
+        ) : null}
 
         <section aria-labelledby="evidence">
           <div className="mb-2 flex items-baseline justify-between gap-3">
