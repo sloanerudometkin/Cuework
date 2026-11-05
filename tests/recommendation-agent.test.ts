@@ -5,15 +5,12 @@ import type { Handle } from "@/lib/db/connect";
 import { recommendations } from "@/lib/db/schema";
 import { seedDemoWorkspace } from "@/lib/seed/demo";
 import { DEMO_PROPERTIES, generateDemoSnapshots, type DemoKey } from "@/lib/seed/generator";
-import { modelAvailability, significantNumbers } from "@/lib/services/local-model";
-import { agentStatus, checksFor, investigateLead, investigatePending, runCheck, YOY_VETO, type Lead } from "@/lib/services/recommendation-agent";
-import { loadSnapshots } from "@/lib/services/workspace";
-import { evaluateTarget, pctChange, sentiment } from "@/lib/domain/metrics";
-import { lastYear } from "@/lib/domain/dates";
+import { modelAvailability, significantNumbers } from "@/lib/services/ai-model";
+import { agentStatus, checksFor, investigateLead, investigatePending, leadKind, runCheck, type Lead } from "@/lib/services/recommendation-agent";
 import { countOpen, getInbox, refreshRecommendations } from "@/lib/services/recommendations";
 
 const NOW = new Date("2026-09-14T12:00:00Z");
-const config = { url: "http://ollama.test", model: "m" };
+const config = { kind: "ollama" as const, url: "http://ollama.test", model: "m" };
 const reply = (body: unknown, status = 200) => new Response(JSON.stringify(body), { status, headers: { "content-type": "application/json" } });
 
 type Msg = { role: string; content: string };
@@ -70,6 +67,7 @@ describe("scoping checks to the lead", () => {
 // --- One lead -------------------------------------------------------------------------------
 const lead: Lead = {
   code: "L1",
+  kind: "decline",
   category: "seo",
   text: {
     title: "Recover organic sessions on the ferry site",
@@ -155,6 +153,18 @@ describe("investigateLead", () => {
     expect((await investigateLead({ ...args, lead: declining, rows: [q(LATEST, 400), q("2025-08-01", 400)] }, { config, fetchImpl: dropIt.fetchImpl })).verdict).toBe("drop");
   });
 
+  it("never lets a gap or opportunity lead be set aside", async () => {
+    const gap: Lead = { ...lead, kind: "gap" };
+    const m = fakeModel({ decide: () => ({ ...keep, ...blank, verdict: "drop", reason: "No decline vs last year." }) });
+    await expect(investigateLead({ ...args, lead: gap }, { config, fetchImpl: m.fetchImpl })).rejects.toThrow(/Unexpected reply shape/);
+    // The model is told what kind of lead it is, and "drop" isn't on offer.
+    expect(m.calls[0][1].content).toMatch(/standing gap or opportunity/);
+    expect(m.calls.at(-1)!.at(-1)!.content).not.toMatch(/verdict "drop"/);
+    expect(leadKind("low_ctr_high_impressions")).toBe("gap");
+    expect(leadKind("yoy_traffic_decline")).toBe("decline");
+    expect(leadKind("something_new")).toBe("gap");
+  });
+
   it("rejects invented numbers, empty rewrites and unusable replies", async () => {
     await expect(investigateLead(args, { config, fetchImpl: fakeModel({ decide: () => ({ ...keep, expected_outcome: "Win back 9,999 sessions." }) }).fetchImpl })).rejects.toThrow(/9999/);
     await expect(investigateLead(args, { config, fetchImpl: fakeModel({ decide: () => ({ ...keep, next_step: "" }) }).fetchImpl })).rejects.toThrow(/empty/);
@@ -162,18 +172,19 @@ describe("investigateLead", () => {
   });
 });
 
-describe("modelAvailability", () => {
+describe("modelAvailability (local)", () => {
   it("is quiet when there is no Ollama, explains a missing model, and respects the off switch", async () => {
+    const demo = { isDemo: true };
     const down = (async () => {
       throw new Error("ECONNREFUSED");
     }) as unknown as typeof fetch;
-    expect(await modelAvailability({}, down)).toEqual({ ok: false, reason: "Ollama isn't running.", configured: false });
+    expect(await modelAvailability(demo, {}, down)).toEqual({ ok: false, reason: "Ollama isn't running.", configured: false });
     const other = (async () => reply({ models: [{ name: "llama3.2:3b" }] })) as unknown as typeof fetch;
-    const missing = await modelAvailability({}, other);
+    const missing = await modelAvailability(demo, {}, other);
     expect(!missing.ok && missing.reason).toMatch(/ollama pull qwen3:4b/);
     const ready = (async () => reply({ models: [{ name: "qwen3:4b" }] })) as unknown as typeof fetch;
-    expect(await modelAvailability({}, ready)).toEqual({ ok: true });
-    expect((await modelAvailability({ CUEWORK_AI_AGENT: "off" }, ready)).ok).toBe(false);
+    expect(await modelAvailability(demo, {}, ready)).toMatchObject({ ok: true, config: { kind: "ollama" } });
+    expect((await modelAvailability(demo, { CUEWORK_AI_AGENT: "off" }, ready)).ok).toBe(false);
   });
   it("normalises numbers for the invented-number guard", () => {
     expect([...significantNumbers("12,400 views, 1.80% CTR, 3 months, $1,200")].sort()).toEqual(["1.8", "1200", "12400"]);
@@ -194,23 +205,20 @@ describe("investigatePending", () => {
     const before = await getInbox(h.db, orgId);
     const openBefore = before.open.length;
     expect(openBefore).toBeGreaterThan(2);
-    // Drop a lead the year-over-year veto allows (its target isn't clearly worse than last year).
-    const snaps = await loadSnapshots(h.db, orgId);
-    const latest = (pid: string) => snaps.filter((x) => x.propertyId === pid).reduce((m, x) => (x.periodStart > m ? x.periodStart : m), "");
-    const droppable = before.open.find((r) => {
-      const p = latest(r.propertyId);
-      const yoy = pctChange(evaluateTarget(snaps, r.propertyId, r.target, p), evaluateTarget(snaps, r.propertyId, r.target, lastYear(p)));
-      return yoy == null || Math.abs(yoy) < YOY_VETO || sentiment(r.target.metric, yoy) !== "bad";
-    })!;
-    const firstTitle = droppable.title;
-
-    // Drop the highest-priority lead, keep the second with lowered confidence (its text echoed
-    // back so every number is grounded); every other lead gets an unusable reply.
-    const second = before.open.find((r) => r.id !== droppable.id)!;
+    // Set aside the top lead by merging it into another lead of the same property (allowed for any
+    // kind of lead), keep that other lead with lowered confidence, and give every other lead an
+    // unusable reply.
+    const top = before.open[0];
+    const second = before.open.find((r) => r.id !== top.id && r.propertyId === top.propertyId)!;
+    expect(second).toBeDefined();
+    const firstTitle = top.title;
     const m = fakeModel({
       decide: (msgs) => {
         const own = /^Lead L\d+ · [^:]+: (.*)$/m.exec(msgs[1].content)?.[1];
-        if (own === firstTitle) return { ...keep, ...blank, verdict: "drop", reason: "Too small to matter this month." };
+        if (own === firstTitle) {
+          const code = new RegExp(`^- (L\\d+): ${second.title.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}$`, "m").exec(msgs[1].content)?.[1];
+          return { ...keep, ...blank, verdict: "merge", merge_with: code ?? "", reason: "Same underlying issue as the other lead." };
+        }
         if (own === second.title)
           return { ...keep, lower_confidence: true, reason: "A check weakened this lead.", title: second.title, rationale: second.rationale, expected_outcome: second.expectedOutcome, next_step: second.nextStep, why_now: second.whyNow };
         return "{";
@@ -229,13 +237,14 @@ describe("investigatePending", () => {
     const after = await getInbox(h.db, orgId);
     expect(after.open).toHaveLength(openBefore - 1);
     expect(after.setAside.map((r) => r.title)).toEqual([firstTitle]);
-    expect(after.setAside[0].agentNote).toMatch(/Too small/);
+    expect(after.setAside[0].agentNote).toMatch(/Same underlying issue/);
+    expect(after.setAside[0].agentVerdict).toBe("merge");
     expect(await countOpen(h.db, orgId)).toBe(openBefore - 1);
 
     // Same data → same leads → the verdict sticks; only the failed leads still await the agent.
     const refreshed = await refreshRecommendations(h.db, orgId, NOW);
     expect(refreshed.awaitingAgent).toBe(openBefore - 2);
     const [still] = await h.db.select().from(recommendations).where(eq(recommendations.id, after.setAside[0].id));
-    expect(still.agentVerdict).toBe("drop");
+    expect(still.agentVerdict).toBe("merge");
   });
 });

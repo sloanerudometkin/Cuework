@@ -11,7 +11,7 @@ import {
 import { capRecommendations } from "@/lib/domain/entitlements";
 import { generateRecommendations } from "@/lib/domain/recommendations";
 import { comparePriority, scorePriority } from "@/lib/domain/prioritization";
-import { sourceHash } from "./local-model";
+import { sourceHash } from "./ai-model";
 import { toISODate } from "@/lib/domain/dates";
 import { loadWorkspace, ServiceError, type Actor } from "./workspace";
 

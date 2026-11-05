@@ -127,6 +127,18 @@ aws apprunner create-service --service-name $APP --cli-input-json '{
 * `DATABASE_SSL=verify` uses the AWS RDS CA bundle already baked into the image (`/app/certs/rds-global-bundle.pem`) — encrypted **and** verified.
 * `DEMO_MODE=false` means only credential sign-in is offered. Set it to `true` only on a separate, disposable demo instance: the demo workspace is shared and passwordless.
 
+### Optional: the AI recommendation agent
+
+Without a model the app shows the rules engine's recommendations as they are. App Runner has no GPU, so for a hosted deploy the practical free option is a hosted provider's free tier (see `.env.example`). Free tiers may use the data you send, so by default Cuework only sends the fictional demo workspace; real workspaces keep the rules engine unless you set `CUEWORK_AI_HOSTED_FOR_ALL=true` (and are comfortable with the provider's terms).
+
+```bash
+aws secretsmanager create-secret --name cuework/prod/ai-api-key --secret-string "<your Groq or Gemini key>"
+```
+
+Then add `"CUEWORK_AI_PROVIDER": "groq"` (or `"gemini"`) to `RuntimeEnvironmentVariables` and `"AI_API_KEY": "'$(SECRET_ARN cuework/prod/ai-api-key)'"` to `RuntimeEnvironmentSecrets`.
+
+> **Untested on App Runner.** The agent runs after the response is sent (Next.js `after()`), and App Runner throttles CPU between requests. While someone has the inbox open it polls every 10 seconds, which keeps the instance busy, but a run nobody is watching may stall until the next request. If that's a problem, run the agent from a scheduled job instead.
+
 Then open the service URL from `aws apprunner describe-service --service-arn <arn> --query Service.ServiceUrl`, click **Create a workspace**, and you have a real, empty Starter workspace.
 
 ## 6. Custom domain, WAF, monitoring

@@ -6,7 +6,7 @@ import { addMonths, formatMonth, lastYear } from "@/lib/domain/dates";
 import { evaluateTarget, filterRows, formatMetricValue, pctChange, propertyPeriods, sentiment, sumRows, metricFromTotals } from "@/lib/domain/metrics";
 import { scorePriority } from "@/lib/domain/prioritization";
 import { CATEGORY_LABEL, type Category, type Dimension, type MetricId, type MetricTarget, type Snapshot } from "@/lib/domain/types";
-import { chatJson, LocalModelError, significantNumbers, type CardText, type ChatMessage, type EvidenceLine, type ModelConfig } from "./local-model";
+import { chatJson, inventedNumbers, ModelError, type CardText, type ChatMessage, type EvidenceLine, type ModelConfig } from "./ai-model";
 import { loadSnapshots } from "./workspace";
 
 /**
@@ -171,8 +171,22 @@ export function runCheck(check: CheckName, ctx: { rows: Snapshot[]; propertyId: 
 // The agent
 // ---------------------------------------------------------------------------
 
+/**
+ * What kind of claim a lead makes, from the rule that produced it:
+ *  - decline: something got worse (can be a false alarm: seasonality, tracking)
+ *  - gap: a standing shortfall or opportunity vs a benchmark or a missing page. A flat trend
+ *    doesn't refute it, and the rules already require enough volume to matter, so the agent
+ *    may keep or merge these but never set them aside. (On Groq the agent dropped two real gap
+ *    leads because they showed "no decline vs last year".)
+ */
+export type LeadKind = "decline" | "gap";
+const DECLINE_RULES = new Set(["yoy_traffic_decline", "landing_page_conversion_decline", "conversion_tracking_anomaly"]);
+/** Unknown rules count as gaps, which is the safe side: they can't be set aside. */
+export const leadKind = (ruleKey: string): LeadKind => (DECLINE_RULES.has(ruleKey) ? "decline" : "gap");
+
 export interface Lead {
   code: string;
+  kind: LeadKind;
   category: Category;
   text: CardText;
   evidence: EvidenceLine[];
@@ -200,19 +214,21 @@ const stepSchema = (checks: CheckName[]) =>
     action: z.enum([...checks, "decide"]),
   });
 
-const DECISION = z.object({
-  verdict: z.enum(["keep", "drop", "merge"]),
-  merge_with: z.string().max(10).describe('Code of the other lead (e.g. "L2") when merging, otherwise ""'),
-  reason: z.string().min(10).max(400).describe("One or two sentences citing what you found."),
-  lower_confidence: z.boolean().describe("true only if a check contradicts or weakens the lead"),
-  title: z.string().max(140),
-  rationale: z.string().max(900),
-  expected_outcome: z.string().max(400),
-  next_step: z.string().max(500),
-  why_now: z.string().max(400),
-});
+/** Built per lead: gap leads can't choose "drop". */
+const decisionSchema = (kind: LeadKind) =>
+  z.object({
+    verdict: kind === "decline" ? z.enum(["keep", "drop", "merge"]) : z.enum(["keep", "merge"]),
+    merge_with: z.string().max(10).describe('Code of the other lead (e.g. "L2") when merging, otherwise ""'),
+    reason: z.string().min(10).max(400).describe("One or two sentences citing what you found."),
+    lower_confidence: z.boolean().describe("true only if a check contradicts or weakens the lead"),
+    title: z.string().max(140),
+    rationale: z.string().max(900),
+    expected_outcome: z.string().max(400),
+    next_step: z.string().max(500),
+    why_now: z.string().max(400),
+  });
 
-function systemPrompt(checks: CheckName[], conversionLead: boolean): string {
+function systemPrompt(checks: CheckName[], conversionLead: boolean, kind: LeadKind): string {
   return `You are Cuework's analyst agent. Cuework helps a small in-house marketing team decide what to work on. Cuework's rules flagged a lead from the team's data. Your job is to check whether it is a real, worthwhile issue before the team sees it, using a few data checks.
 
 Available checks:
@@ -223,23 +239,25 @@ Each turn, reply with JSON: {"thought": "...", "action": "<check or decide>"}. T
 
 Pick only checks that can change your verdict for this lead. Decide as soon as one check settles the question; run at most ${MAX_CHECKS}, and never repeat one.
 
-Common false alarms: a dip that also happened a year earlier (seasonality), and volumes too small to matter.${
-    conversionLead ? " For conversion leads, also watch for conversions collapsing while traffic holds: then the real issue is broken tracking." : " This lead is not about conversions, so judge it only on its own metric and channel."
-  }`;
+${
+    kind === "decline"
+      ? "This lead claims something got worse. Common false alarms: a dip that also happened a year earlier (seasonality), and volumes too small to matter."
+      : "This lead is about a standing gap or opportunity (for example a CTR below benchmark, a missing answer or page, or wasted spend), not a decline. A stable or rising trend does NOT make it a false alarm: the gap is the problem. Use checks to confirm the gap is real and current, and to sharpen the wording."
+  }${conversionLead ? " For conversion leads, also watch for conversions collapsing while traffic holds: then the real issue is broken tracking." : " This lead is not about conversions, so judge it only on its own metric and channel."}`;
 }
 
-const DECIDE_PROMPT = `Now give your verdict as JSON.
+const decidePrompt = (kind: LeadKind) => `Now give your verdict as JSON.
 - verdict "keep": the lead is real and worth doing. Rewrite title, rationale, expected_outcome, next_step and why_now in plain, specific language (title starts with a verb and names the page, query, campaign or keyword).
-- verdict "drop": it's a false alarm or not worth the team's time. Leave the text fields "".
-- verdict "merge": it's the same issue as another listed lead; put its code in merge_with. Leave the text fields "".
+${kind === "decline" ? `- verdict "drop": it's a false alarm or not worth the team's time. Leave the text fields "".\n` : ""}- verdict "merge": it's the same issue as another listed lead; put its code in merge_with. Leave the text fields "".
 - reason: say what your checks showed about THIS lead's own metric, in one or two sentences. Don't mention metrics the lead isn't about.
 - Only use numbers that appear in the lead or in your check results. Never invent or calculate new figures.
-- lower_confidence: true only if a check contradicts or weakens the lead (for example the dip also happened last year). Otherwise false.`;
+- lower_confidence: true only if a check contradicts or weakens the lead${kind === "decline" ? " (for example the dip also happened last year)" : " (for example the gap is much smaller than the evidence says). A flat trend is not a reason"}. Otherwise false.`;
 
 function leadMessage(lead: Lead, property: { name: string; goal: string; conversionLabel: string }, others: Lead[]) {
   return [
     `Property: ${property.name}${property.goal ? ` (goal: ${property.goal})` : ""}. Conversions are “${property.conversionLabel}”.`,
     `Lead ${lead.code} · ${CATEGORY_LABEL[lead.category]}: ${lead.text.title}`,
+    `Lead type: ${lead.kind === "decline" ? "a decline (something got worse)" : "a standing gap or opportunity (not a decline)"}.`,
     `Why it was flagged: ${lead.text.rationale}`,
     `Suggested action: ${lead.text.nextStep}`,
     `Expected outcome: ${lead.text.expectedOutcome}`,
@@ -263,7 +281,8 @@ export async function investigateLead(
 ): Promise<Verdict> {
   const { lead, others, property, rows, period } = input;
   const offered = checksFor(lead);
-  const system = systemPrompt(offered, isConversionLead(lead));
+  const system = systemPrompt(offered, isConversionLead(lead), lead.kind);
+  const DECIDE_PROMPT = decidePrompt(lead.kind);
   const first = leadMessage(lead, property, others);
   const messages: ChatMessage[] = [
     { role: "system", content: system },
@@ -288,17 +307,19 @@ export async function investigateLead(
   }
 
   messages.push({ role: "user", content: DECIDE_PROMPT });
-  const d = await chatJson(messages, DECISION, { ...opts, maxTokens: 900 });
+  const reply = await chatJson(messages, decisionSchema(lead.kind), { ...opts, maxTokens: 900 });
+  // The schema's verdict union depends on the lead kind; widen it so the checks below type-check.
+  const d = { ...reply, verdict: reply.verdict as Verdict["verdict"] };
 
   const text: CardText = { title: d.title.trim(), rationale: d.rationale.trim(), expectedOutcome: d.expected_outcome.trim(), nextStep: d.next_step.trim(), whyNow: d.why_now.trim() };
   if (d.verdict === "keep") {
     const short = Object.entries(text).find(([, v]) => v.length < 8);
-    if (short) throw new LocalModelError(`Kept the lead but left “${short[0]}” empty.`);
+    if (short) throw new ModelError(`Kept the lead but left “${short[0]}” empty.`);
   }
   let mergeWith: string | null = null;
   if (d.verdict === "merge") {
     mergeWith = d.merge_with.trim().toUpperCase();
-    if (!others.some((o) => o.code === mergeWith)) throw new LocalModelError(`Merged into unknown lead “${d.merge_with}”.`);
+    if (!others.some((o) => o.code === mergeWith)) throw new ModelError(`Merged into unknown lead “${d.merge_with}”.`);
   }
 
   // A small model can't be trusted to call a problem "seasonal": only set a lead aside if the target
@@ -309,16 +330,16 @@ export async function investigateLead(
     const then = evaluateTarget(rows, property.id, lead.target, lastYear(period));
     const yoy = pctChange(now, then);
     if (yoy != null && Math.abs(yoy) >= YOY_VETO && sentiment(lead.target.metric, yoy) === "bad") {
-      throw new LocalModelError(`Tried to set aside a lead whose ${lead.target.label} is ${pct(now, then)} vs last year.`);
+      throw new ModelError(`Tried to set aside a lead whose ${lead.target.label} is ${pct(now, then)} vs last year.`);
     }
   }
 
   // Guard against invented numbers: everything significant must come from the lead or a check result.
   // The agent's own instructions count as allowed too (e.g. the "13" in "13 months").
-  const allowed = significantNumbers(`${system}\n${DECIDE_PROMPT}\n${seen}`);
   const said = [d.reason, ...(d.verdict === "keep" ? Object.values(text) : [])].join(" ");
-  const invented = [...significantNumbers(said)].filter((n) => !allowed.has(n));
-  if (invented.length) throw new LocalModelError(`Introduced numbers not in the data: ${invented.join(", ")}`);
+  // Rounded figures (706 → "about 700", 32,848 → "33k") pass; numbers with no close match don't.
+  const invented = inventedNumbers(said, `${system}\n${DECIDE_PROMPT}\n${seen}`);
+  if (invented.length) throw new ModelError(`Introduced numbers not in the data: ${invented.join(", ")}`);
 
   return {
     verdict: d.verdict,
@@ -385,6 +406,7 @@ export async function investigatePending(db: Db, orgId: string, opts: { config?:
       const periods = propertyPeriods(snapshots);
       const toLead = (r: (typeof open)[number], i: number): Lead => ({
         code: `L${i + 1}`,
+        kind: leadKind(r.ruleKey),
         category: r.category as Category,
         text: { title: r.title, rationale: r.rationale, expectedOutcome: r.expectedOutcome, nextStep: r.nextStep, whyNow: r.whyNow },
         evidence: evidence.filter((e) => e.recommendationId === r.id).sort((a, b) => a.position - b.position),

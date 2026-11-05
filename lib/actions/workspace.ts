@@ -2,9 +2,11 @@
 
 import { after } from "next/server";
 import { z } from "zod";
+import { eq } from "drizzle-orm";
 import type { Db } from "@/lib/db/connect";
+import { organizations } from "@/lib/db/schema";
 import { investigatePending } from "@/lib/services/recommendation-agent";
-import { modelAvailability } from "@/lib/services/local-model";
+import { modelAvailability } from "@/lib/services/ai-model";
 import { DATASETS, type DatasetId } from "@/lib/domain/csv";
 import { PLAN_KEYS, type PlanKey } from "@/lib/domain/entitlements";
 import { resetDemoWorkspace } from "@/lib/seed/demo";
@@ -40,15 +42,17 @@ export async function decideAction(recommendationId: string, input: DecisionInpu
 }
 
 /**
- * If a local model is available, let the AI agent investigate the open leads after the response
- * is sent: the user sees the rules engine's results immediately, and the agent's verdicts
- * replace them as they land.
+ * If a model is available for this workspace, let the AI agent investigate the open leads after
+ * the response is sent: the user sees the rules engine's results immediately, and the agent's
+ * verdicts replace them as they land. Hosted free-tier models only see demo workspaces by default.
  */
 async function scheduleAgent(db: Db, orgId: string, pending: number): Promise<{ agentRunning: boolean; agentNote?: string }> {
   if (pending === 0) return { agentRunning: false };
-  const available = await modelAvailability();
+  const [org] = await db.select({ isDemo: organizations.isDemo }).from(organizations).where(eq(organizations.id, orgId));
+  const available = await modelAvailability({ isDemo: Boolean(org?.isDemo) });
   if (!available.ok) return { agentRunning: false, agentNote: available.configured ? available.reason : undefined };
-  after(() => investigatePending(db, orgId));
+  const { config } = available;
+  after(() => investigatePending(db, orgId, { config }));
   return { agentRunning: true };
 }
 
