@@ -22,13 +22,6 @@
       "when": 1793888292592,
       "tag": "0002_agent_verdicts",
       "breakpoints": true
-    },
-    {
-      "idx": 3,
-      "version": "7",
-      "when": 1793889672712,
-      "tag": "0003_agent_score_changes",
-      "breakpoints": true
     }
   ]
 }

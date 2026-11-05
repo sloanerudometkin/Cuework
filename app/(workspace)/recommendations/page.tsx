@@ -318,11 +318,6 @@ function Detail({
           <section aria-labelledby="agent" className="rounded-xl border border-line bg-sunken px-4 py-4">
             <Eyebrow id="agent">{rec.agentVerdict === "keep" ? "AI agent checked this" : "Why the AI agent set this aside"}</Eyebrow>
             {rec.agentNote ? <p className="mt-1.5 leading-relaxed">{rec.agentNote}</p> : null}
-            <p className="mt-2 text-sm text-soft">
-              {rec.agentScoreChanges?.length
-                ? rec.agentScoreChanges.map((c) => `Lowered ${c.score} from ${Math.round(c.from * 100)}% to ${Math.round(c.to * 100)}% because of what it found.`).join(" ")
-                : "Scores unchanged. The agent can lower confidence when the data undercuts a lead, but it never raises a priority."}
-            </p>
             {rec.agentChecks?.length ? (
               <ol className="mt-3 space-y-1.5 text-sm text-soft">
                 {rec.agentChecks.map((c, i) => (

@@ -69,7 +69,9 @@ const keep = {
   verdict: "keep",
   merge_with: "",
   reason: "The drop is not seasonal: sessions were 41,200 against far more a year earlier.",
-  lower_confidence: false,
+  impact_change: 1,
+  urgency_change: 0,
+  confidence_change: 0,
   title: "Find out why organic visits to the ferry site fell",
   rationale: "Organic sessions are down 18.4% on last year, to 41,200 a month.",
   expected_outcome: "Win back 3,000–5,000 sessions a month.",
@@ -86,7 +88,7 @@ describe("investigateLead", () => {
       decide: () => keep,
     });
     const v = await investigateLead(args, { config, fetchImpl: m.fetchImpl });
-    expect(v).toMatchObject({ verdict: "keep", confidenceChange: 0, checks: [{ check: "trend", thought: "Is this seasonal?" }] });
+    expect(v).toMatchObject({ verdict: "keep", impactChange: 1, checks: [{ check: "trend", thought: "Is this seasonal?" }] });
     expect(v.text?.title).toBe(keep.title);
     // The check's result was fed back to the model before it decided.
     expect(m.calls[1].at(-1)?.content).toMatch(/^Result of trend:/);
@@ -105,20 +107,6 @@ describe("investigateLead", () => {
     const merge = await investigateLead(args, { config, fetchImpl: fakeModel({ decide: () => ({ ...keep, ...blank, verdict: "merge", merge_with: "l2", reason: "Same ranking problem as L2." }) }).fetchImpl });
     expect(merge).toMatchObject({ verdict: "merge", mergeWith: "L2" });
     await expect(investigateLead(args, { config, fetchImpl: fakeModel({ decide: () => ({ ...keep, ...blank, verdict: "merge", merge_with: "L9", reason: "Same as L9 here." }) }).fetchImpl })).rejects.toThrow(/unknown lead/);
-  });
-
-  it("can only lower confidence, never raise scores", async () => {
-    const lowered = await investigateLead(args, { config, fetchImpl: fakeModel({ decide: () => ({ ...keep, lower_confidence: true }) }).fetchImpl });
-    expect(lowered.confidenceChange).toBe(-1);
-    // The old score-raising fields aren't part of the reply shape; only lower_confidence counts.
-    const tried = await investigateLead(args, { config, fetchImpl: fakeModel({ decide: () => ({ ...keep, impact_change: 1, urgency_change: 1 }) }).fetchImpl });
-    expect(tried).not.toHaveProperty("impactChange");
-    expect(tried.confidenceChange).toBe(0);
-  });
-
-  it("allows numbers from its own instructions, like the 13 in a 13-month trend", async () => {
-    const v = await investigateLead(args, { config, fetchImpl: fakeModel({ decide: () => ({ ...keep, reason: "The 13-month trend shows sessions at 41,200, not a seasonal dip." }) }).fetchImpl });
-    expect(v.verdict).toBe("keep");
   });
 
   it("rejects invented numbers, empty rewrites and unusable replies", async () => {
@@ -162,25 +150,12 @@ describe("investigatePending", () => {
     expect(openBefore).toBeGreaterThan(2);
     const firstTitle = before.open[0].title;
 
-    // Drop the highest-priority lead, keep the second with lowered confidence (its text echoed
-    // back so every number is grounded); every other lead gets an unusable reply.
-    const second = before.open[1];
+    // Drop the highest-priority lead; every other lead gets an unusable reply.
     const m = fakeModel({
-      decide: (msgs) => {
-        if (msgs[1].content.includes(firstTitle)) return { ...keep, ...blank, verdict: "drop", reason: "Too small to matter this month." };
-        if (msgs[1].content.includes(second.title))
-          return { ...keep, lower_confidence: true, reason: "A check weakened this lead.", title: second.title, rationale: second.rationale, expected_outcome: second.expectedOutcome, next_step: second.nextStep, why_now: second.whyNow };
-        return "{";
-      },
+      decide: (msgs) => (msgs[1].content.includes(firstTitle) ? { ...keep, ...blank, verdict: "drop", reason: "Too small to matter this month." } : "{"),
     });
     const status = await investigatePending(h.db, orgId, { config, fetchImpl: m.fetchImpl });
-    expect(status).toMatchObject({ running: false, done: 2, failed: openBefore - 2 });
-
-    const [kept] = await h.db.select().from(recommendations).where(eq(recommendations.id, second.id));
-    expect(kept).toMatchObject({ agentVerdict: "keep", impact: second.impact, urgency: second.urgency });
-    expect(kept.confidence).toBeCloseTo(second.confidence - 0.1);
-    expect(kept.priorityScore).toBeLessThan(second.priorityScore);
-    expect(kept.agentScoreChanges).toEqual([{ score: "confidence", from: second.confidence, to: kept.confidence }]);
+    expect(status).toMatchObject({ running: false, done: 1, failed: openBefore - 1 });
     expect(agentStatus(orgId)?.running).toBe(false);
 
     const after = await getInbox(h.db, orgId);
@@ -191,7 +166,7 @@ describe("investigatePending", () => {
 
     // Same data → same leads → the verdict sticks; only the failed leads still await the agent.
     const refreshed = await refreshRecommendations(h.db, orgId, NOW);
-    expect(refreshed.awaitingAgent).toBe(openBefore - 2);
+    expect(refreshed.awaitingAgent).toBe(openBefore - 1);
     const [still] = await h.db.select().from(recommendations).where(eq(recommendations.id, after.setAside[0].id));
     expect(still.agentVerdict).toBe("drop");
   });

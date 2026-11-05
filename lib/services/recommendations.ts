@@ -75,7 +75,6 @@ export async function refreshRecommendations(db: Db, orgId: string, now = new Da
         agentVerdict: null,
         agentNote: null,
         agentChecks: null,
-        agentScoreChanges: null,
       };
       const judged = keepAgentWork
         ? { priorityScore: scorePriority({ impact: found.impact, urgency: found.urgency, strategic: d.strategic, confidence: found.confidence, effort: d.effort }) }
