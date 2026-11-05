@@ -97,11 +97,11 @@ export async function importDataset(
       );
     }
 
+    const refreshed = await refreshRecommendations(txDb, orgId);
     const measured = await measureOutcomes(txDb, orgId);
-    return { rows: parsed.rows.length, months, replaced, outcomesMeasured: measured.measured };
+    return { rows: parsed.rows.length, months, replaced, newRecommendations: refreshed.created, outcomesMeasured: measured.measured };
   });
-  const refreshed = await refreshRecommendations(db, orgId);
-  return { ...summary, newRecommendations: refreshed.created };
+  return summary;
 }
 
 export function previewDataset(dataset: DatasetId, csv: string): CsvParseResult & { sample: CsvParseResult["rows"] } {

@@ -13,11 +13,7 @@ export function RefreshAnalysis() {
       disabled={pending}
       onClick={() =>
         run(() => refreshRecommendationsAction(), {
-          success: (d) => {
-            const counts = d.created + d.updated + d.resurfaced === 0 ? "Analysis is up to date." : `Analysis refreshed: ${d.created} new, ${d.updated} updated, ${d.resurfaced} resurfaced.`;
-            if (d.agentRunning) return `${counts} The AI agent is investigating ${d.awaitingAgent} lead${d.awaitingAgent === 1 ? "" : "s"} in the background.`;
-            return d.agentNote ? `${counts} (AI agent unavailable: ${d.agentNote})` : counts;
-          },
+          success: (d) => (d.created + d.updated + d.resurfaced === 0 ? "Analysis is up to date." : `Analysis refreshed: ${d.created} new, ${d.updated} updated, ${d.resurfaced} resurfaced.`),
         })
       }
     >
