@@ -6,7 +6,10 @@ import { recommendations } from "@/lib/db/schema";
 import { seedDemoWorkspace } from "@/lib/seed/demo";
 import { DEMO_PROPERTIES, generateDemoSnapshots, type DemoKey } from "@/lib/seed/generator";
 import { modelAvailability, significantNumbers } from "@/lib/services/local-model";
-import { agentStatus, investigateLead, investigatePending, runCheck, type Lead } from "@/lib/services/recommendation-agent";
+import { agentStatus, checksFor, investigateLead, investigatePending, runCheck, YOY_VETO, type Lead } from "@/lib/services/recommendation-agent";
+import { loadSnapshots } from "@/lib/services/workspace";
+import { evaluateTarget, pctChange, sentiment } from "@/lib/domain/metrics";
+import { lastYear } from "@/lib/domain/dates";
 import { countOpen, getInbox, refreshRecommendations } from "@/lib/services/recommendations";
 
 const NOW = new Date("2026-09-14T12:00:00Z");
@@ -44,6 +47,23 @@ describe("agent checks", () => {
       expect(significantNumbers(out).size).toBeGreaterThan(0);
     }
     expect(runCheck("trend", { rows, propertyId: "ferr", period: LATEST, target: sessionsTarget })).toMatch(/a year earlier/);
+  });
+});
+
+describe("scoping checks to the lead", () => {
+  const ctrTarget = { metric: "ctr" as const, channel: "organic" as const, dimension: "query" as const, key: "harbour cruise times", label: "Organic CTR" };
+  const convTarget = { metric: "conversions" as const, channel: "all" as const, dimension: "property" as const, key: "", label: "Total conversions" };
+
+  it("keeps property-wide conversions out of non-conversion leads", () => {
+    const out = runCheck("compare_last_year", { rows, propertyId: "ferr", period: LATEST, target: ctrTarget });
+    expect(out).not.toMatch(/conversion/i);
+    expect(out).toMatch(/Organic channel impressions/);
+    expect(checksFor({ category: "seo", target: ctrTarget })).not.toContain("tracking_check");
+  });
+
+  it("gives conversion leads the property-wide view and the tracking check", () => {
+    expect(runCheck("compare_last_year", { rows, propertyId: "ferr", period: LATEST, target: convTarget })).toMatch(/Property conversions/);
+    expect(checksFor({ category: "analytics", target: convTarget })).toContain("tracking_check");
   });
 });
 
@@ -121,6 +141,20 @@ describe("investigateLead", () => {
     expect(v.verdict).toBe("keep");
   });
 
+  it("won't set aside a lead whose metric is clearly worse than last year", async () => {
+    // A query whose CTR halved versus the same month last year.
+    const q = (period: string, clicks: number) => ({
+      propertyId: "ferr", periodStart: period, channel: "organic" as const, dimension: "query" as const, key: "ferry times", secondaryKey: null,
+      impressions: 10_000, clicks, sessions: 0, conversions: 0, cost: 0, avgPosition: 3, attrs: {},
+    });
+    const declining: Lead = { ...lead, target: { metric: "ctr", channel: "organic", dimension: "query", key: "ferry times", label: "Organic CTR · ferry times" } };
+    const synthetic = [q(LATEST, 200), q("2025-08-01", 400)];
+    const dropIt = fakeModel({ decide: () => ({ ...keep, ...blank, verdict: "drop", reason: "Looks seasonal to me." }) });
+    await expect(investigateLead({ ...args, lead: declining, rows: synthetic }, { config, fetchImpl: dropIt.fetchImpl })).rejects.toThrow(/-50.0% vs last year/);
+    // The same reply on a lead that's fine year over year is accepted.
+    expect((await investigateLead({ ...args, lead: declining, rows: [q(LATEST, 400), q("2025-08-01", 400)] }, { config, fetchImpl: dropIt.fetchImpl })).verdict).toBe("drop");
+  });
+
   it("rejects invented numbers, empty rewrites and unusable replies", async () => {
     await expect(investigateLead(args, { config, fetchImpl: fakeModel({ decide: () => ({ ...keep, expected_outcome: "Win back 9,999 sessions." }) }).fetchImpl })).rejects.toThrow(/9999/);
     await expect(investigateLead(args, { config, fetchImpl: fakeModel({ decide: () => ({ ...keep, next_step: "" }) }).fetchImpl })).rejects.toThrow(/empty/);
@@ -160,15 +194,24 @@ describe("investigatePending", () => {
     const before = await getInbox(h.db, orgId);
     const openBefore = before.open.length;
     expect(openBefore).toBeGreaterThan(2);
-    const firstTitle = before.open[0].title;
+    // Drop a lead the year-over-year veto allows (its target isn't clearly worse than last year).
+    const snaps = await loadSnapshots(h.db, orgId);
+    const latest = (pid: string) => snaps.filter((x) => x.propertyId === pid).reduce((m, x) => (x.periodStart > m ? x.periodStart : m), "");
+    const droppable = before.open.find((r) => {
+      const p = latest(r.propertyId);
+      const yoy = pctChange(evaluateTarget(snaps, r.propertyId, r.target, p), evaluateTarget(snaps, r.propertyId, r.target, lastYear(p)));
+      return yoy == null || Math.abs(yoy) < YOY_VETO || sentiment(r.target.metric, yoy) !== "bad";
+    })!;
+    const firstTitle = droppable.title;
 
     // Drop the highest-priority lead, keep the second with lowered confidence (its text echoed
     // back so every number is grounded); every other lead gets an unusable reply.
-    const second = before.open[1];
+    const second = before.open.find((r) => r.id !== droppable.id)!;
     const m = fakeModel({
       decide: (msgs) => {
-        if (msgs[1].content.includes(firstTitle)) return { ...keep, ...blank, verdict: "drop", reason: "Too small to matter this month." };
-        if (msgs[1].content.includes(second.title))
+        const own = /^Lead L\d+ · [^:]+: (.*)$/m.exec(msgs[1].content)?.[1];
+        if (own === firstTitle) return { ...keep, ...blank, verdict: "drop", reason: "Too small to matter this month." };
+        if (own === second.title)
           return { ...keep, lower_confidence: true, reason: "A check weakened this lead.", title: second.title, rationale: second.rationale, expected_outcome: second.expectedOutcome, next_step: second.nextStep, why_now: second.whyNow };
         return "{";
       },

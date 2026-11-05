@@ -3,7 +3,7 @@ import { z } from "zod/v4";
 import type { Db } from "@/lib/db/connect";
 import { properties, recommendationEvidence, recommendations, type AgentCheck, type AgentScoreChange } from "@/lib/db/schema";
 import { addMonths, formatMonth, lastYear } from "@/lib/domain/dates";
-import { evaluateTarget, filterRows, formatMetricValue, pctChange, propertyPeriods, sumRows, metricFromTotals } from "@/lib/domain/metrics";
+import { evaluateTarget, filterRows, formatMetricValue, pctChange, propertyPeriods, sentiment, sumRows, metricFromTotals } from "@/lib/domain/metrics";
 import { scorePriority } from "@/lib/domain/prioritization";
 import { CATEGORY_LABEL, type Category, type Dimension, type MetricId, type MetricTarget, type Snapshot } from "@/lib/domain/types";
 import { chatJson, LocalModelError, significantNumbers, type CardText, type ChatMessage, type EvidenceLine, type ModelConfig } from "./local-model";
@@ -31,6 +31,8 @@ import { loadSnapshots } from "./workspace";
  */
 
 export const MAX_CHECKS = 3;
+/** A lead whose target is at least this much worse than last year can't be set aside as a false alarm. */
+export const YOY_VETO = 0.1;
 
 // ---------------------------------------------------------------------------
 // Checks the agent can ask for (deterministic code over the property's data)
@@ -38,11 +40,24 @@ export const MAX_CHECKS = 3;
 
 export const CHECKS = {
   trend: "The target metric for each of the last 13 months, next to the same month a year earlier. Use it to tell a real decline from seasonality.",
-  compare_last_year: "The target metric and the property's total sessions and conversions this month vs the same month last year.",
+  compare_last_year: "The target metric this month vs the same month last year, next to the same comparison for its channel's overall traffic, so you can tell an item-specific change from a channel-wide one.",
   breakdown: "The rows behind the target: for a whole-property metric, the items that moved most since last month; for one query/page/keyword, its last 6 months in detail.",
   tracking_check: "Sessions, conversions and conversion rate for the whole property over the last 4 months. Use it to spot broken conversion tracking.",
 } as const;
 export type CheckName = keyof typeof CHECKS;
+
+const CONVERSION_METRICS: MetricId[] = ["conversions", "conversion_rate", "cpa"];
+
+/** Whether a lead is about conversions at all. Property-wide conversion data only confuses the others. */
+export function isConversionLead(lead: { category: Category; target: MetricTarget }): boolean {
+  return lead.category === "analytics" || CONVERSION_METRICS.includes(lead.target.metric);
+}
+
+/** The checks offered for a lead. tracking_check only makes sense for conversion leads. */
+export function checksFor(lead: { category: Category; target: MetricTarget }): CheckName[] {
+  const all = Object.keys(CHECKS) as CheckName[];
+  return isConversionLead(lead) ? all : all.filter((c) => c !== "tracking_check");
+}
 
 const fmt = (metric: MetricId, v: number | null) => formatMetricValue(metric, v);
 const pct = (c: number | null, p: number | null) => {
@@ -79,15 +94,28 @@ export function runCheck(check: CheckName, ctx: { rows: Snapshot[]; propertyId: 
 
   if (check === "compare_last_year") {
     const ly = lastYear(period);
-    const now = totals(period);
-    const then = totals(ly);
     const cur = val(target, period);
     const prev = val(target, ly);
-    return [
-      `${target.label}: ${fmt(target.metric, cur)} in ${formatMonth(period)} vs ${fmt(target.metric, prev)} in ${formatMonth(ly)} (${pct(cur, prev)}).`,
-      `Property sessions: ${fmt("sessions", now.sessions)} vs ${fmt("sessions", then.sessions)} (${pct(now.sessions, then.sessions)}).`,
-      `Property conversions: ${fmt("conversions", now.conversions)} vs ${fmt("conversions", then.conversions)} (${pct(now.conversions, then.conversions)}).`,
-    ].join("\n");
+    const lines = [`${target.label}: ${fmt(target.metric, cur)} in ${formatMonth(period)} vs ${fmt(target.metric, prev)} in ${formatMonth(ly)} (${pct(cur, prev)}).`];
+    if (CONVERSION_METRICS.includes(target.metric)) {
+      // Conversion leads: compare against the whole property's traffic and conversions.
+      const now = totals(period);
+      const then = totals(ly);
+      lines.push(
+        `Property sessions: ${fmt("sessions", now.sessions)} vs ${fmt("sessions", then.sessions)} (${pct(now.sessions, then.sessions)}).`,
+        `Property conversions: ${fmt("conversions", now.conversions)} vs ${fmt("conversions", then.conversions)} (${pct(now.conversions, then.conversions)}).`,
+      );
+    } else {
+      // Everything else: compare only against the same channel's overall volume, never conversions.
+      const channel = target.channel === "all" ? undefined : target.channel;
+      const ch = (p: string) => sumRows(filterRows(rows, { propertyId, period: p, channel, dimension: "property" }));
+      const now = ch(period);
+      const then = ch(ly);
+      const name = target.channel === "all" ? "All channels" : `${target.channel[0].toUpperCase()}${target.channel.slice(1)} channel`;
+      const volume: MetricId = target.channel === "paid" ? "clicks" : target.metric === "impressions" || target.metric === "ctr" || target.metric === "avg_position" ? "impressions" : "sessions";
+      lines.push(`${name} ${volume}: ${fmt(volume, now[volume as "clicks" | "impressions" | "sessions"])} vs ${fmt(volume, then[volume as "clicks" | "impressions" | "sessions"])} (${pct(now[volume as "clicks" | "impressions" | "sessions"], then[volume as "clicks" | "impressions" | "sessions"])}).`);
+    }
+    return lines.join("\n");
   }
 
   if (check === "tracking_check") {
@@ -164,10 +192,13 @@ export interface Verdict {
   checks: AgentCheck[];
 }
 
-const STEP = z.object({
-  thought: z.string().max(160).describe("One short line: what you will check and why, or why you can decide now."),
-  action: z.enum([...(Object.keys(CHECKS) as CheckName[]), "decide"]),
-});
+/** Per lead, so the model can only pick checks that make sense for it. */
+const stepSchema = (checks: CheckName[]) =>
+  z.object({
+    // Generous limit: a tight one makes constrained decoding cut thoughts off mid-sentence.
+    thought: z.string().max(500).describe("Under 20 words: what you will check and why, or why you can decide now."),
+    action: z.enum([...checks, "decide"]),
+  });
 
 const DECISION = z.object({
   verdict: z.enum(["keep", "drop", "merge"]),
@@ -181,25 +212,27 @@ const DECISION = z.object({
   why_now: z.string().max(400),
 });
 
-const SYSTEM = `You are Cuework's analyst agent. Cuework helps a small in-house marketing team decide what to work on. Cuework's rules flagged a lead from the team's data. Your job is to check whether it is a real, worthwhile issue before the team sees it, using a few data checks.
+function systemPrompt(checks: CheckName[], conversionLead: boolean): string {
+  return `You are Cuework's analyst agent. Cuework helps a small in-house marketing team decide what to work on. Cuework's rules flagged a lead from the team's data. Your job is to check whether it is a real, worthwhile issue before the team sees it, using a few data checks.
 
 Available checks:
-${Object.entries(CHECKS)
-  .map(([k, v]) => `- ${k}: ${v}`)
-  .join("\n")}
+${checks.map((k) => `- ${k}: ${CHECKS[k]}`).join("\n")}
 - decide: you know enough to give a verdict.
 
-Each turn, reply with JSON: {"thought": "...", "action": "<check or decide>"}. The thought is one short line saying what you will check and why, not a summary of results.
+Each turn, reply with JSON: {"thought": "...", "action": "<check or decide>"}. The thought is under 20 words, saying what you will check and why. Don't summarise results in it.
 
-Pick only checks that can change your verdict for this lead. tracking_check is only relevant when the lead is about conversions. Decide as soon as one check settles the question; run at most ${MAX_CHECKS}, and never repeat one.
+Pick only checks that can change your verdict for this lead. Decide as soon as one check settles the question; run at most ${MAX_CHECKS}, and never repeat one.
 
-Common false alarms: a dip that also happened a year earlier (seasonality), conversions collapsing while traffic holds (broken tracking: the real issue is tracking), and volumes too small to matter.`;
+Common false alarms: a dip that also happened a year earlier (seasonality), and volumes too small to matter.${
+    conversionLead ? " For conversion leads, also watch for conversions collapsing while traffic holds: then the real issue is broken tracking." : " This lead is not about conversions, so judge it only on its own metric and channel."
+  }`;
+}
 
 const DECIDE_PROMPT = `Now give your verdict as JSON.
 - verdict "keep": the lead is real and worth doing. Rewrite title, rationale, expected_outcome, next_step and why_now in plain, specific language (title starts with a verb and names the page, query, campaign or keyword).
 - verdict "drop": it's a false alarm or not worth the team's time. Leave the text fields "".
 - verdict "merge": it's the same issue as another listed lead; put its code in merge_with. Leave the text fields "".
-- reason: say what your checks showed about THIS lead, in one or two sentences. Don't mention unrelated metrics.
+- reason: say what your checks showed about THIS lead's own metric, in one or two sentences. Don't mention metrics the lead isn't about.
 - Only use numbers that appear in the lead or in your check results. Never invent or calculate new figures.
 - lower_confidence: true only if a check contradicts or weakens the lead (for example the dip also happened last year). Otherwise false.`;
 
@@ -229,16 +262,18 @@ export async function investigateLead(
   opts: { config?: ModelConfig; fetchImpl?: typeof fetch } = {},
 ): Promise<Verdict> {
   const { lead, others, property, rows, period } = input;
+  const offered = checksFor(lead);
+  const system = systemPrompt(offered, isConversionLead(lead));
   const first = leadMessage(lead, property, others);
   const messages: ChatMessage[] = [
-    { role: "system", content: SYSTEM },
+    { role: "system", content: system },
     { role: "user", content: first },
   ];
   const checks: AgentCheck[] = [];
   let seen = first;
 
   for (let i = 0; i < MAX_CHECKS; i++) {
-    const step = await chatJson(messages, STEP, { ...opts, maxTokens: 200 });
+    const step = await chatJson(messages, stepSchema(offered), { ...opts, maxTokens: 200 });
     messages.push({ role: "assistant", content: JSON.stringify(step) });
     if (step.action === "decide") break;
     const check = step.action as CheckName;
@@ -266,9 +301,21 @@ export async function investigateLead(
     if (!others.some((o) => o.code === mergeWith)) throw new LocalModelError(`Merged into unknown lead “${d.merge_with}”.`);
   }
 
+  // A small model can't be trusted to call a problem "seasonal": only set a lead aside if the target
+  // isn't also clearly worse than the same month last year. (In a live run it dropped a 43% YoY
+  // conversion-rate decline as "seasonality".) Leads vetoed here keep their rules version.
+  if (d.verdict === "drop") {
+    const now = evaluateTarget(rows, property.id, lead.target, period);
+    const then = evaluateTarget(rows, property.id, lead.target, lastYear(period));
+    const yoy = pctChange(now, then);
+    if (yoy != null && Math.abs(yoy) >= YOY_VETO && sentiment(lead.target.metric, yoy) === "bad") {
+      throw new LocalModelError(`Tried to set aside a lead whose ${lead.target.label} is ${pct(now, then)} vs last year.`);
+    }
+  }
+
   // Guard against invented numbers: everything significant must come from the lead or a check result.
   // The agent's own instructions count as allowed too (e.g. the "13" in "13 months").
-  const allowed = significantNumbers(`${SYSTEM}\n${DECIDE_PROMPT}\n${seen}`);
+  const allowed = significantNumbers(`${system}\n${DECIDE_PROMPT}\n${seen}`);
   const said = [d.reason, ...(d.verdict === "keep" ? Object.values(text) : [])].join(" ");
   const invented = [...significantNumbers(said)].filter((n) => !allowed.has(n));
   if (invented.length) throw new LocalModelError(`Introduced numbers not in the data: ${invented.join(", ")}`);
