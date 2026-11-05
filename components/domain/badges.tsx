@@ -1,4 +1,4 @@
-import { CircleDashed, FlaskConical, Link2, ShieldCheck, Upload } from "lucide-react";
+import { CircleDashed, FlaskConical, Link2, ShieldCheck, Sparkles, Upload } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { EVIDENCE_LABEL, VERDICT_LABEL, type EvidenceStrength, type Verdict } from "@/lib/domain/outcomes";
 import { CATEGORY_LABEL, type Category } from "@/lib/domain/types";
@@ -18,6 +18,28 @@ const SOURCE = {
 } as const;
 
 /** Every number in Cuework says where it came from. Demo data is never presented as live. */
+/** Shows the local AI agent's verdict on a lead (the rules engine found it; the agent checked it). */
+export function AgentBadge({ verdict }: { verdict: string | null }) {
+  if (!verdict) return null;
+  const kept = verdict === "keep";
+  return (
+    <Tip
+      content={
+        kept
+          ? "Cuework's rules flagged this; a free AI agent running locally then checked the data and confirmed it. It can't change the numbers."
+          : "A free AI agent running locally checked this lead and thinks it's a false alarm or a duplicate. Open it to see why."
+      }
+    >
+      <span>
+        <Badge tone={kept ? "info" : "outline"}>
+          <Sparkles className="size-3" aria-hidden />
+          {kept ? "AI-checked" : "Set aside by AI"}
+        </Badge>
+      </span>
+    </Tip>
+  );
+}
+
 export function SourceBadge({ status }: { status: keyof typeof SOURCE | null }) {
   if (!status) return <Badge tone="outline">No data yet</Badge>;
   const s = SOURCE[status];
