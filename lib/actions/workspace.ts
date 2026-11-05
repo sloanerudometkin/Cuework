@@ -1,10 +1,6 @@
 "use server";
 
-import { after } from "next/server";
 import { z } from "zod";
-import type { Db } from "@/lib/db/connect";
-import { investigatePending } from "@/lib/services/recommendation-agent";
-import { modelAvailability } from "@/lib/services/local-model";
 import { DATASETS, type DatasetId } from "@/lib/domain/csv";
 import { PLAN_KEYS, type PlanKey } from "@/lib/domain/entitlements";
 import { resetDemoWorkspace } from "@/lib/seed/demo";
@@ -39,24 +35,8 @@ export async function decideAction(recommendationId: string, input: DecisionInpu
   });
 }
 
-/**
- * If a local model is available, let the AI agent investigate the open leads after the response
- * is sent: the user sees the rules engine's results immediately, and the agent's verdicts
- * replace them as they land.
- */
-async function scheduleAgent(db: Db, orgId: string, pending: number): Promise<{ agentRunning: boolean; agentNote?: string }> {
-  if (pending === 0) return { agentRunning: false };
-  const available = await modelAvailability();
-  if (!available.ok) return { agentRunning: false, agentNote: available.configured ? available.reason : undefined };
-  after(() => investigatePending(db, orgId));
-  return { agentRunning: true };
-}
-
 export async function refreshRecommendationsAction() {
-  return act(async ({ db, orgId }) => {
-    const result = await refreshRecommendations(db, orgId);
-    return { ...result, ...(await scheduleAgent(db, orgId, result.awaitingAgent)) };
-  });
+  return act(async ({ db, orgId }) => refreshRecommendations(db, orgId));
 }
 
 export async function savePlanAction(input: {
@@ -114,9 +94,7 @@ export async function previewImportAction(formData: FormData) {
 export async function importAction(formData: FormData) {
   return act(async ({ db, orgId }) => {
     const { dataset, propertyId, file } = readCsvForm(formData);
-    const summary = await importDataset(db, { orgId, propertyId, dataset, csv: await file.text(), fileName: file.name });
-    await scheduleAgent(db, orgId, 1);
-    return summary;
+    return importDataset(db, { orgId, propertyId, dataset, csv: await file.text(), fileName: file.name });
   });
 }
 
